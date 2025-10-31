@@ -1,173 +1,119 @@
 ﻿"use client";
 
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from 'react';
+import { io } from 'socket.io-client';
+import { nodeService } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Map, AreaChart, HeartPulse, Send, Users, ShieldCheck, AlertTriangle, HardDrive, Power, Activity, Bell } from "lucide-react";
+import { Map, AlertTriangle, Activity, Loader2 } from "lucide-react";
 
 export default function NodePage() {
+  const [heatmapData, setHeatmapData] = useState([]);
+  const [gasLevel, setGasLevel] = useState('');
+  const [location, setLocation] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Backend origin (match node-service)
+  const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN || 'http://localhost:4000';
+
+    // Connect to WebSocket
+    const socket = io(API_ORIGIN, { withCredentials: true });
+
+    // Initialize data
+    const initializeData = async () => {
+      try {
+        console.log('[NodePage] initializing data, calling backend API...');
+        // Start heatmap streaming
+        await nodeService.startHeatmap();
+        
+        // Get initial gas level
+        const gasResponse = await nodeService.getGasLevel();
+        setGasLevel(gasResponse);
+        
+        // Get location
+        const locResponse = await nodeService.getLocation();
+        setLocation(locResponse.loc);
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Error initializing data:', error);
+        setLoading(false);
+      }
+    };
+
+    // Listen for heatmap updates
+    socket.on('heatmap-data', (data) => {
+      setHeatmapData(data);
+    });
+
+    initializeData();
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-6 w-6 animate-spin text-green-400" />
+          <span className="text-green-400 text-lg">Loading node data...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
-      {/* HEADER */}
-      <header className="flex items-center justify-between p-4 md:p-6 border-b border-gray-800 bg-[#0a0a0a]">
+      <header className="flex items-center justify-between p-4 md:p-6 border-b border-gray-800">
         <h1 className="text-3xl font-bold text-green-400">Node</h1>
-        <div className="flex items-center space-x-4">
-          <Badge variant="outline" className="text-green-400 border-green-400">
-            NODE_ALPHA-01
-          </Badge>
-        </div>
+        <Badge variant="outline" className="text-green-400 border-green-400">
+          NODE_ALPHA-01
+        </Badge>
       </header>
 
-      {/* GRID LAYOUT */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_2.5fr_1fr] gap-4 lg:overflow-hidden w-full pb-4 md:pb-6">
-        
-        {/* LEFT PANEL */}
-        <div className="flex flex-col gap-4 overflow-y-auto pl-4">
-          <Card className="bg-[#1a1a1a] border border-gray-800">
-            <CardHeader>
-              <CardTitle className="text-green-400 flex items-center gap-2">
-                <Power className="w-5 h-5" />
-                Command & Comms
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              <Button className="bg-green-500 hover:bg-green-600 text-black font-bold">
-                TRANSMIT SOS
-              </Button>
-              <Button variant="outline" className="border-red-500 text-red-400 hover:bg-red-500 hover:text-white">
-                REQUEST EVAC
-              </Button>
-            </CardContent>
-          </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
+        <Card className="bg-[#1a1a1a] border border-gray-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Map className="h-5 w-5" />
+              Heatmap Data
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {heatmapData.length > 0 ? (
+              <pre>{JSON.stringify(heatmapData, null, 2)}</pre>
+            ) : (
+              <p>No heatmap data available</p>
+            )}
+          </CardContent>
+        </Card>
 
-          <Card className="bg-[#1a1a1a] border border-gray-800">
-            <CardHeader>
-              <CardTitle className="text-green-400 flex items-center gap-2">
-                <Activity className="w-5 h-5" />
-                Unit Roster
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              {[
-                ["Cdt. Khan (ALPHA-01)", "OPERATIONAL", "green"],
-                ["Cdt. Singh (ALPHA-02)", "OPERATIONAL", "green"],
-                ["Cdt. Nillian (BRAVO-01)", "WARNING", "yellow"],
-                ["Cdt. Lee (BRAVO-02)", "DANGER", "red"],
-              ].map(([name, status, color]) => (
-                <div key={name} className="flex justify-between items-center">
-                  <span className="text-sm text-gray-300">{name}</span>
-                  <Badge
-                    className={`text-black ${
-                      color === "green"
-                        ? "bg-green-400"
-                        : color === "yellow"
-                        ? "bg-yellow-400"
-                        : "bg-red-500"
-                    }`}
-                  >
-                    {status}
-                  </Badge>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="bg-[#1a1a1a] border border-gray-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Gas Level
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>{gasLevel}</p>
+          </CardContent>
+        </Card>
 
-        {/* CENTER PANEL */}
-        <div className="flex flex-col gap-4 overflow-hidden">
-          {/* Environmental Trend */}
-          <Card className="bg-[#1a1a1a] border border-gray-800 h-[250px]">
-            <CardHeader>
-              <CardTitle className="text-green-400">
-                Environmental Trend
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex items-center justify-center text-gray-400 border border-green-800 h-full">
-              [Gas Level Chart Placeholder]
-            </CardContent>
-          </Card>
-
-          {/* HUGE MAP VISUALIZER */}
-          <Card className="bg-[#1a1a1a] border border-gray-800 flex-grow h-[600px]">
-            <CardHeader>
-              <CardTitle className="text-green-400 flex items-center gap-2">
-                <Map className="w-5 h-5" />
-                Primary Visualizer
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex items-center justify-center text-green-700 border border-green-900 h-full">
-              [Mapbox / Data Feed]
-            </CardContent>
-          </Card>
-
-          {/* Biometric Feed */}
-          <Card className="bg-[#1a1a1a] border border-gray-800 h-[250px]">
-            <CardHeader>
-              <CardTitle className="text-green-400">
-                Biometric Feed (Soldier)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex items-center justify-center text-gray-400 border border-green-800 h-full">
-              [Heart Rate / SpO2 Chart]
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* RIGHT PANEL */}
-        <div className="flex flex-col gap-4 overflow-y-auto pr-4">
-          <Card className="bg-[#1a1a1a] border border-gray-800">
-            <CardHeader>
-              <CardTitle className="text-green-400 flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-yellow-400" />
-                System Health
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              {[
-                ["Main CPU", "OPERATIONAL", "green"],
-                ["LoRa Network", "OPERATIONAL", "green"],
-                ["Gas Sensors (MQ)", "OPERATIONAL", "green"],
-                ["GPS Module", "WARNING", "yellow"],
-              ].map(([system, status, color]) => (
-                <div key={system} className="flex justify-between items-center">
-                  <span className="text-sm text-gray-300">{system}</span>
-                  <Badge
-                    className={`text-black ${
-                      color === "green"
-                        ? "bg-green-400"
-                        : color === "yellow"
-                        ? "bg-yellow-400"
-                        : "bg-red-500"
-                    }`}
-                  >
-                    {status}
-                  </Badge>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card className="bg-[#1a1a1a] border border-gray-800">
-            <CardHeader>
-              <CardTitle className="text-yellow-400 flex items-center gap-2">
-                <Bell className="w-5 h-5" />
-                Recent Alerts
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2 text-sm">
-              {[
-                ["14:32", "CAUTION: Methane spike (Grid 4C)", "text-yellow-400"],
-                ["14:28", "DANGER: CO2 Levels Critical (Grid 4B)", "text-red-400"],
-                ["14:25", "INFO: Comms re-established", "text-blue-400"],
-              ].map(([time, msg, color]) => (
-                <div key={time} className="flex justify-between">
-                  <span className="font-mono">{time}</span>
-                  <span className={`${color}`}>{msg}</span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="bg-[#1a1a1a] border border-gray-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Location
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>{location}</p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
