@@ -1,0 +1,63 @@
+#include <SPI.h>
+#include <LoRa.h>
+
+// MQ Sensor pins
+#define MQ2_PIN 34
+#define MQ7_PIN 35
+#define MQ135_PIN 32
+
+// LoRa module pins
+#define LORA_SCK 18
+#define LORA_MISO 19
+#define LORA_MOSI 23
+#define LORA_SS 5
+#define LORA_RST 14
+#define LORA_DIO0 2   // Changed from 26 → 2
+
+// LoRa frequency (change as per region/module)
+#define LORA_BAND 433E6
+
+void setup() {
+  Serial.begin(115200);
+  while (!Serial);
+
+  Serial.println("Initializing LoRa transmitter...");
+
+  // Setup LoRa SPI pins
+  SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_SS);
+  LoRa.setPins(LORA_SS, LORA_RST, LORA_DIO0);
+
+  // Start LoRa
+  if (!LoRa.begin(LORA_BAND)) {
+    Serial.println("LoRa init failed. Check connections.");
+    while (true);
+  }
+
+  Serial.println("LoRa init successful!");
+}
+
+void loop() {
+  // Read MQ sensor analog values
+  int mq2Value = analogRead(MQ2_PIN);
+  mq2Value = mq2Value - 600 ;
+  int mq7Value = analogRead(MQ7_PIN);
+  mq7Value = mq7Value - 500 ;
+  int mq135Value = analogRead(MQ135_PIN);
+  mq135Value = mq135Value - 450 ;
+
+  // Print to Serial Monitor
+  Serial.print("MQ2: "); Serial.print(mq2Value);
+  Serial.print(" | MQ7: "); Serial.print(mq7Value);
+  Serial.print(" | MQ135: "); Serial.println(mq135Value);
+ 
+  // Send over LoRa
+  LoRa.beginPacket();
+  LoRa.print("MQ2: "); LoRa.print(mq2Value);
+  LoRa.print(", MQ7: "); LoRa.print(mq7Value);
+  LoRa.print(", MQ135: "); LoRa.print(mq135Value);
+  LoRa.endPacket();
+
+  Serial.println("Data sent over LoRa!\n");
+
+  delay(5000);  // Send every 5 seconds
+}
