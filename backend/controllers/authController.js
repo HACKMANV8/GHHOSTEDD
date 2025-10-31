@@ -2,6 +2,29 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import User from "../DB/User.js";
 
+export const registerUser = async (req, res) => {
+  try {
+    const { username, password, role } = req.body;
+
+    const existing = await User.findOne({ username });
+    if (existing) return res.status(400).json({ message: "User already exists" });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = new User({
+      username,
+      password: hashedPassword,
+      role: role || "user",
+    });
+
+    await newUser.save();
+
+    res.status(201).json({ success: true, message: "User registered successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 export const loginUser = async (req, res) => {
   try {
     const { username, password } = req.body;
