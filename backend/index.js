@@ -3,7 +3,11 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import cors from "cors"; // 1. Import cors
+import connectToMongoDB from "./mongoconnection.js";
+import noderoute from "./routes/noderoutes.js";
+import adminroute from "./routes/adminroutes.js";
+import { setupWatcher } from "./utils/watcher.js";
+import cors from "cors";
 
 dotenv.config();
 
@@ -17,14 +21,12 @@ const PORT = process.env.PORT || 4000; // Using 4000 as default for backend
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: FRONTEND_ORIGIN,
+    origin: "*", // 👈 change this to your frontend URL before deploying
     methods: ["GET", "POST"],
-    credentials: true,
-  }
+  },
 });
 
 // MongoDB connection
-import connectToMongoDB from "./mongoconnection.js";
 connectToMongoDB();
 
 // Middleware
@@ -39,28 +41,22 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// route file import
-import noderoute from "./routes/noderoutes.js";
-
-// All routes will be prefixed with /api
+// Routes
 app.use("/api", noderoute(io));
 
-// Socket.IO connection
+// Socket.IO setup
 io.on("connection", (socket) => {
-  console.log(`🟢 User connected: ${socket.id}`);
+  console.log("🟢 Client connected:", socket.id);
 
-  // Example: receive a message
-  socket.on("sendMessage", (data) => {
-    console.log("Message received:", data);
-    // Broadcast to all connected clients
-    io.emit("receiveMessage", data);
-  });
-
-  // When user disconnects
   socket.on("disconnect", () => {
-    console.log(`🔴 User disconnected: ${socket.id}`);
+    console.log("🔴 Client disconnected:", socket.id);
   });
 });
 
+// ML model watcher setup
+setupWatcher(io);
+
 // Start server
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
