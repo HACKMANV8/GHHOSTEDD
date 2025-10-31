@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-const outputPath = path.resolve("models/output.json");
+const outputPath = path.resolve("./backend/predictions.json");
 
 export const getSurvivalTime = (req, res) => {
   try {
@@ -14,20 +14,22 @@ export const getSurvivalTime = (req, res) => {
     const interval = setInterval(() => {
       try {
         const data = JSON.parse(fs.readFileSync(outputPath, "utf-8"));
-        const surv = data.survival_timer_model || {};
 
+        // 🧠 Extract new format fields
+        const envStatus = data.env_status?.[0] || "Unknown";
+        const survivalTime = data.survival_prediction?.[0]?.[0] || null;
+
+        // 🔵 Emit survival update to all connected clients
         req.io.emit("survival_update", {
-          survival_time_seconds: surv.estimated_survival_time_sec || null,
-          confidence_survival: surv.confidence || null,
-          alert_level: surv.alert_level || "normal",
+          environment_status: envStatus,
+          survival_time_seconds: survivalTime,
         });
       } catch (err) {
-        console.error("❌ Error reading output.json in interval:", err);
+        console.error("❌ Error reading predictions.json:", err);
       }
-      
     }, 2000);
 
-    // Stop when client disconnects or request closes
+    // 🧹 Clean up when client disconnects
     req.on("close", () => clearInterval(interval));
   } catch (err) {
     console.error("❌ Error setting up survival watcher:", err);

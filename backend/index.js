@@ -24,6 +24,7 @@ const io = new Server(server, {
   cors: {
     origin: ["ngrok config add-authtoken 2AIe4KrJeFQdVLlOyArR3yEPuDS_3qxy2x7D4bUWHUSNgKSPb"], // 👈 change this to your frontend URL before deploying
     methods: ["GET", "POST"],
+    credentials: true
   },
 });
 
@@ -63,6 +64,8 @@ import { setupSocketHandlers } from "./socket/socketHandler.js";
 setupSocketHandlers(io);
 // ML model watcher setup
 // setupWatcher(io);
+
+
 
 // Start server
 server.listen(PORT, () => {
