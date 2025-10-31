@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-const outputPath = path.resolve("models/output.json");
+const outputPath = path.resolve("./backend/predictions.json");
 
 export const getEnvStatus = (req, res) => {
   try {
@@ -14,26 +14,28 @@ export const getEnvStatus = (req, res) => {
     const interval = setInterval(() => {
       try {
         const data = JSON.parse(fs.readFileSync(outputPath, "utf-8"));
-        const env = data.env_status_model || {};
 
+        // 🧠 Updated fields based on new ML output format
+        const envStatus = data.env_status?.[0] || "Unknown";
+        const survivalPrediction = data.survival_prediction?.[0]?.[0] || null;
+
+        // 🔵 Emit environment update
         req.io.emit("env_update", {
-          environment_status: env.status || "unknown",
-          confidence_env: env.confidence || null,
-          temperature: env.temperature || null,
-          humidity: env.humidity || null,
-          air_quality_index: env.air_quality_index || null,
+          environment_status: envStatus,
         });
 
-        // 🔴 If environment is danger, also emit survival data
-        if (env.status === "danger" && data.survival_timer_model) {
-          req.io.emit("survival_update", data.survival_timer_model);
+        // 🔴 If environment is Caution or Danger → emit survival info
+        if (envStatus === "Caution" || envStatus === "Danger") {
+          req.io.emit("survival_update", {
+            survival_time: survivalPrediction,
+          });
         }
       } catch (err) {
-        console.error("❌ Error reading output.json in interval:", err);
+        console.error("❌ Error reading predictions.json:", err);
       }
     }, 2000);
 
-    // Stop reading when request closes (optional cleanup)
+    // 🧹 Stop reading when request closes
     req.on("close", () => clearInterval(interval));
   } catch (err) {
     console.error("❌ Error setting up environment watcher:", err);
