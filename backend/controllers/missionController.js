@@ -1,35 +1,47 @@
+// backend/controllers/missionController.js
 import Mission from "../DB/Mission.js";
-import Node from "../DB/Node.js";
 
 export const createMission = async (req, res) => {
   try {
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ message: "Only admins can create missions" });
-    }
+    const { name, nodes } = req.body;
+    const userId = req.user.id;
 
-    const { name, description, location, nodeIds } = req.body;
-
-    const mission = new Mission({
+    const mission = await Mission.create({
       name,
-      description,
-      location,
-      nodes: nodeIds,
-      createdBy: req.user.id,
+      nodes,
+      createdBy: userId,
     });
 
-    await mission.save();
-    res.status(201).json({ success: true, mission });
+    res.status(201).json({
+      success: true,
+      message: "Mission created successfully",
+      mission,
+    });
   } catch (err) {
-    res.status(500).json({ message: "Error creating mission" });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
+// ✅ Fetch missions depending on user role
 export const getMyMissions = async (req, res) => {
   try {
-    const missions = await Mission.find({ createdBy: req.user.id })
-      .populate("nodes", "name status location");
-    res.status(200).json({ success: true, missions });
+    const { id, role } = req.user;
+    let missions;
+
+    if (role === "admin") {
+      // Admins can view all missions
+      missions = await Mission.find().populate("createdBy", "username role");
+    } else {
+      // Normal users can only see their own
+      missions = await Mission.find({ createdBy: id });
+    }
+
+    res.status(200).json({
+      success: true,
+      count: missions.length,
+      missions,
+    });
   } catch (err) {
-    res.status(500).json({ message: "Error fetching missions" });
+    res.status(500).json({ success: false, message: err.message });
   }
 };

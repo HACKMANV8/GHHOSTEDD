@@ -1,9 +1,9 @@
 import mongoose from "mongoose";
 
 const nodeSchema = new mongoose.Schema({
-  name: String,
-  status: String,
-  location: String,
+  name: { type: String, required: true },
+  status: { type: String, enum: ["active", "inactive"], default: "active" },
+  location: { type: String },
 });
 
 export default mongoose.model("Node", nodeSchema);

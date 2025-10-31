@@ -5,7 +5,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import connectToMongoDB from "./mongoconnection.js";
 import noderoute from "./routes/noderoutes.js";
-import adminroute from "./routes/adminroutes.js";
+// import adminroute from "./routes/adminroutes.js";
 import { setupWatcher } from "./utils/watcher.js";
 import cors from "cors";
 import missionRoutes from "./routes/missionRoutes.js";
@@ -45,6 +45,11 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use("/api", noderoute(io),missionRoutes);
 
+
+import authRoutes from "./routes/authRoutes.js";
+
+app.use("/api/auth", authRoutes);
+
 // Socket.IO setup
 io.on("connection", (socket) => {
   console.log("🟢 Client connected:", socket.id);
@@ -54,6 +59,8 @@ io.on("connection", (socket) => {
   });
 });
 
+import { setupSocketHandlers } from "./socket/socketHandler.js";
+setupSocketHandlers(io);
 // ML model watcher setup
 // setupWatcher(io);
 
