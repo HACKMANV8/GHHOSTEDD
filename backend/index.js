@@ -22,7 +22,7 @@ const PORT = process.env.PORT || 4000; // Using 4000 as default for backend
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*", // 👈 change this to your frontend URL before deploying
+    origin: ["ngrok config add-authtoken 2AIe4KrJeFQdVLlOyArR3yEPuDS_3qxy2x7D4bUWHUSNgKSPb"], // 👈 change this to your frontend URL before deploying
     methods: ["GET", "POST"],
   },
 });
