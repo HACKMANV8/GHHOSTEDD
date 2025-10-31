@@ -8,6 +8,7 @@ import noderoute from "./routes/noderoutes.js";
 import adminroute from "./routes/adminroutes.js";
 import { setupWatcher } from "./utils/watcher.js";
 import cors from "cors";
+import missionRoutes from "./routes/missionRoutes.js";
 
 dotenv.config();
 
@@ -42,7 +43,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use("/api", noderoute(io));
+app.use("/api", noderoute(io),missionRoutes);
 
 // Socket.IO setup
 io.on("connection", (socket) => {
