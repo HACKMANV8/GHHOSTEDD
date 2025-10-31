@@ -5,49 +5,46 @@ import { io } from 'socket.io-client';
 import { nodeService } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Loader2, 
-  Terminal, 
-  Users, 
-  BarChart3, 
-  MapPin, 
-  HeartPulse, 
-  Server, 
+import {
+  Loader2,
+  Terminal,
+  Users,
+  BarChart3,
+  MapPin,
+  HeartPulse,
+  Server,
   AlertTriangle,
   Compass
 } from "lucide-react";
 
-// 1. IMPORT YOUR NEW MAP COMPONENT (you will create this file)
-// import { EnvironmentalMap } from '@/components/environmental-map';
+// ✅ 1. IMPORT YOUR MAP COMPONENT
+import EnvironmentalMap from '@/components/EnvironmentalMap';
 
 export default function NodePage() {
   const [heatmapData, setHeatmapData] = useState([]);
   const [gasLevel, setGasLevel] = useState('');
-  const [location, setLocation] = useState('');
+  const [location, setLocation] = useState<[number, number]>([12.9716, 77.5946]); // default coords (Bangalore)
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Backend origin (match node-service)
     const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN || 'http://localhost:4000';
-
-    // Connect to WebSocket
     const socket = io(API_ORIGIN, { withCredentials: true });
 
-    // Initialize data
     const initializeData = async () => {
       try {
-        console.log('[NodePage] initializing data, calling backend API...');
-        // Start heatmap streaming
+        console.log('[NodePage] initializing data...');
         await nodeService.startHeatmap();
-        
-        // Get initial gas level
+
         const gasResponse = await nodeService.getGasLevel();
         setGasLevel(gasResponse);
-        
-        // Get location
+
+        // Assuming backend returns something like { loc: { lat, lng } }
         const locResponse = await nodeService.getLocation();
-        setLocation(locResponse.loc);
-        
+        if (locResponse?.loc) {
+          const [lat, lng] = locResponse.loc.split(',').map(Number);
+          setLocation([lat, lng]);
+        }
+
         setLoading(false);
       } catch (error) {
         console.error('Error initializing data:', error);
@@ -55,7 +52,6 @@ export default function NodePage() {
       }
     };
 
-    // Listen for heatmap updates
     socket.on('heatmap-data', (data) => {
       setHeatmapData(data);
     });
@@ -80,8 +76,7 @@ export default function NodePage() {
 
   return (
     <div className="text-white p-4 md:p-6">
-      
-      {/* Page title and badge, placed inside content area */}
+      {/* Page title and badge */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-green-400">Node</h1>
         <Badge variant="outline" className="text-green-400 border-green-400">
@@ -89,23 +84,23 @@ export default function NodePage() {
         </Badge>
       </div>
 
-      {/* Main Content Grid */}
+      {/* === Main Content Grid === */}
       <main className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6">
         
         {/* === COLUMN 1 (Narrow) === */}
         <div className="flex flex-col gap-6">
           <Card className="bg-[#1a1a1a] border-gray-800 text-white">
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-green-400">
                 <Terminal className="h-5 w-5" />
                 Command & Comms
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <button className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+            <CardContent className="flex flex-col gap-3 pt-0">
+              <button className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
                 TRANSMIT SOS
               </button>
-              <button className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+              <button className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
                 REQUEST EVAC
               </button>
             </CardContent>
@@ -124,7 +119,6 @@ export default function NodePage() {
                   <span>Cdt. Khan (ALPHA-01)</span>
                   <Badge className="bg-green-500 text-black font-semibold">OPERATIONAL</Badge>
                 </li>
-                {/* ... other soldiers ... */}
                 <li className="flex items-center justify-between">
                   <span>Cdt. Lee (BRAVO-02)</span>
                   <Badge className="bg-red-600 text-white font-semibold">DANGER</Badge>
@@ -158,8 +152,8 @@ export default function NodePage() {
 
         {/* === COLUMN 2 (Wide) === */}
         <div className="flex flex-col gap-6 lg:col-span-2">
-          
-          {/* Environmental Trend Card (NOW A MAP) */}
+
+          {/* 🌍 Environmental Trend (Map Section) */}
           <Card className="bg-[#1a1a1a] border-gray-800 text-white lg:h-96 flex flex-col">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-green-400">
@@ -167,51 +161,42 @@ export default function NodePage() {
                 Environmental Trend
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 p-0 m-0"> {/* Use p-0 and m-0 for the map */}
-              {/* 2. RENDER YOUR MAP COMPONENT HERE
-                You will pass the data it needs as props.
-              */}
-              {/* <EnvironmentalMap
-                centerLocation={location}
+            <CardContent className="flex-1 p-0 m-0">
+              <EnvironmentalMap 
+                centerLocation={location ? location : [12.9716, 77.5946]}
                 heatmapData={heatmapData}
-              /> */}
-
-              {/* Placeholder for now: */}
-              <div className="flex items-center justify-center h-full text-gray-600">
-                [Google Map Component Placeholder]
-              </div>
+              />
             </CardContent>
           </Card>
 
-          {/* Sub-grid for Primary Visualizer & Biometric */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
+          {/* Sub-grid for Visualizer & Biometric */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
-            {/* Primary Visualizer Card (NOW SHOWS GAS LEVEL) */}
-            <Card className="bg-[#1a1a1a] border-gray-800 text-white flex-1 flex flex-col">
-              <CardHeader>
+            {/* Gas Level Visualizer */}
+            <Card className="bg-[#1a1a1a] border-gray-800 text-white">
+              <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-green-400">
                   <MapPin className="h-5 w-5" />
                   Primary Visualizer
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex-1 flex flex-col items-center justify-center">
-                {/* 3. MOVED gasLevel DATA HERE */}
-                <p className="text-gray-400 mb-2">Current Gas Status:</p>
+              <CardContent className="flex flex-col items-center justify-center py-4">
+                <p className="text-gray-400 text-sm mb-1">Current Gas Status:</p>
                 <h3 className="text-2xl font-bold text-green-400 text-center">
                   {gasLevel || "N/A"}
                 </h3>
               </CardContent>
             </Card>
 
-            {/* Biometric Feed Card */}
-            <Card className="bg-[#1a1a1a] border-gray-800 text-white flex-1 flex flex-col">
-              <CardHeader>
+            {/* Biometric Feed */}
+            <Card className="bg-[#1a1a1a] border-gray-800 text-white">
+              <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-green-400">
                   <HeartPulse className="h-5 w-5" />
                   Biometric Feed (Soldier)
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex-1 flex flex-col items-center justify-center">
+              <CardContent className="flex flex-col items-center justify-center py-4">
                 <p className="text-gray-600">[Heart Rate / SpO2 Chart]</p>
               </CardContent>
             </Card>
@@ -233,7 +218,6 @@ export default function NodePage() {
                   <span>Main CPU</span>
                   <Badge className="bg-green-500 text-black font-semibold">OPERATIONAL</Badge>
                 </li>
-                {/* ... other items ... */}
                 <li className="flex items-center justify-between">
                   <span>GPS Module</span>
                   <Badge className="bg-yellow-500 text-black font-semibold">WARNING</Badge>
@@ -242,14 +226,14 @@ export default function NodePage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-[#1a1a1a] border-gray-800 text-white flex-1 flex flex-col">
-            <CardHeader>
+          <Card className="bg-[#1a1a1a] border-gray-800 text-white">
+            <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-green-400">
                 <Compass className="h-5 w-5" />
                 Compass
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col items-center justify-center">
+            <CardContent className="flex flex-col items-center justify-center py-6">
               <p className="text-gray-600">[Compass Placeholder]</p>
             </CardContent>
           </Card>
