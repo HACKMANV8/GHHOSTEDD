@@ -11,7 +11,7 @@ export default (io) => {
         if (!io.heatmapInterval) {
             io.heatmapInterval = setInterval(() => {
                 sendHeatmapData(io);
-            }, 90000);
+            }, 200000);
             console.log("📡 Heatmap broadcast started (every 2 seconds)");
         }
 

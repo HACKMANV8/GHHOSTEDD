@@ -54,7 +54,7 @@ io.on("connection", (socket) => {
 });
 
 // ML model watcher setup
-setupWatcher(io);
+// setupWatcher(io);
 
 // Start server
 server.listen(PORT, () => {
