@@ -13,8 +13,12 @@ import {
   MapPin, 
   HeartPulse, 
   Server, 
-  AlertTriangle 
+  AlertTriangle,
+  Compass
 } from "lucide-react";
+
+// 1. IMPORT YOUR NEW MAP COMPONENT (you will create this file)
+// import { EnvironmentalMap } from '@/components/environmental-map';
 
 export default function NodePage() {
   const [heatmapData, setHeatmapData] = useState([]);
@@ -74,8 +78,6 @@ export default function NodePage() {
     );
   }
 
-  // Page content wrapper.
-  // The padding (p-4) is applied here, and the <header> is removed.
   return (
     <div className="text-white p-4 md:p-6">
       
@@ -88,12 +90,10 @@ export default function NodePage() {
       </div>
 
       {/* Main Content Grid */}
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <main className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6">
         
-        {/* === COLUMN 1 === */}
+        {/* === COLUMN 1 (Narrow) === */}
         <div className="flex flex-col gap-6">
-          
-          {/* Command & Comms Card */}
           <Card className="bg-[#1a1a1a] border-gray-800 text-white">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-green-400">
@@ -111,8 +111,7 @@ export default function NodePage() {
             </CardContent>
           </Card>
 
-          {/* Unit Roster Card (Added flex-1 and flex-col) */}
-          <Card className="bg-[#1a1a1a] border-gray-800 text-white flex-1 flex flex-col">
+          <Card className="bg-[#1a1a1a] border-gray-800 text-white flex flex-col">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-green-400">
                 <Users className="h-5 w-5" />
@@ -125,14 +124,7 @@ export default function NodePage() {
                   <span>Cdt. Khan (ALPHA-01)</span>
                   <Badge className="bg-green-500 text-black font-semibold">OPERATIONAL</Badge>
                 </li>
-                <li className="flex items-center justify-between">
-                  <span>Cdt. Singh (ALPHA-02)</span>
-                  <Badge className="bg-green-500 text-black font-semibold">OPERATIONAL</Badge>
-                </li>
-                <li className="flex items-center justify-between">
-                  <span>Cdt. Nillian (BRAVO-01)</span>
-                  <Badge className="bg-yellow-500 text-black font-semibold">WARNING</Badge>
-                </li>
+                {/* ... other soldiers ... */}
                 <li className="flex items-center justify-between">
                   <span>Cdt. Lee (BRAVO-02)</span>
                   <Badge className="bg-red-600 text-white font-semibold">DANGER</Badge>
@@ -140,100 +132,7 @@ export default function NodePage() {
               </ul>
             </CardContent>
           </Card>
-        </div>
 
-        {/* === COLUMN 2 === */}
-        <div className="flex flex-col gap-6">
-          
-          {/* Environmental Trend Card (DYNAMIC) */}
-          <Card className="bg-[#1a1a1a] border-gray-800 text-white lg:h-96 flex flex-col">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-green-400">
-                <BarChart3 className="h-5 w-5" />
-                Environmental Trend
-              </CardTitle>
-            </CardHeader>
-            {/* Added flex-1 and flex-col to content for spacing */}
-            <CardContent className="flex-1 flex flex-col items-center justify-center">
-              <p className="text-gray-400 mb-2">Current Gas Level</p>
-              <h2 className="text-4xl font-bold text-green-400 text-center">{gasLevel || "N/A"}</h2>
-              {/* Added mt-auto to push placeholder to bottom */}
-              <p className="text-sm text-gray-600 mt-auto pt-4">[Gas Level Chart Placeholder]</p>
-            </CardContent>
-          </Card>
-
-          {/* Sub-grid for Primary Visualizer & Biometric */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
-            
-            {/* Primary Visualizer Card (DYNAMIC) (Added flex-1 and flex-col) */}
-            <Card className="bg-[#1a1a1a] border-gray-800 text-white flex-1 flex flex-col">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-green-400">
-                  <MapPin className="h-5 w-5" />
-                  Primary Visualizer
-                </CardTitle>
-              </CardHeader>
-              {/* Added flex-1 and flex-col to content for spacing */}
-              <CardContent className="flex-1 flex flex-col">
-                <p className="text-gray-400 mb-2">Current Coordinates:</p>
-                <pre className="text-sm bg-black p-2 rounded-md overflow-x-auto">
-                  {location || "No location data"}
-                </pre>
-                {/* Added mt-auto to push placeholder to bottom */}
-                <p className="text-sm text-gray-600 mt-auto pt-4">[Mapbox / Data Feed]</p>
-              </CardContent>
-            </Card>
-
-            {/* Biometric Feed Card (Added flex-1 and flex-col) */}
-            <Card className="bg-[#1a1a1a] border-gray-800 text-white flex-1 flex flex-col">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-green-400">
-                  <HeartPulse className="h-5 w-5" />
-                  Biometric Feed (Soldier)
-                </CardTitle>
-              </CardHeader>
-              {/* Added flex-1 to content */}
-              <CardContent className="flex-1 flex flex-col items-center justify-center">
-                <p className="text-gray-600">[Heart Rate / SpO2 Chart]</p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* === COLUMN 3 === */}
-        <div className="flex flex-col gap-6">
-          
-          {/* System Health Card */}
-          <Card className="bg-[#1a1a1a] border-gray-800 text-white">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-green-400">
-                <Server className="h-5 w-5" />
-                System Health
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3">
-                <li className="flex items-center justify-between">
-                  <span>Main CPU</span>
-                  <Badge className="bg-green-500 text-black font-semibold">OPERATIONAL</Badge>
-                </li>
-                <li className="flex items-center justify-between">
-                  <span>LoRa Network</span>
-                  <Badge className="bg-green-500 text-black font-semibold">OPERATIONAL</Badge>
-                </li>
-                <li className="flex items-center justify-between">
-                  <span>Gas Sensors (MQ)</span>
-                  <Badge className="bg-green-500 text-black font-semibold">OPERATIONAL</Badge>
-                </li>
-                <li className="flex items-center justify-between">
-                  <span>GPS Module</span>
-                  <Badge className="bg-yellow-500 text-black font-semibold">WARNING</Badge>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          {/* Recent Alerts Card (Added flex-1 and flex-col) */}
           <Card className="bg-[#1a1a1a] border-gray-800 text-white flex-1 flex flex-col">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-green-400">
@@ -257,6 +156,104 @@ export default function NodePage() {
           </Card>
         </div>
 
+        {/* === COLUMN 2 (Wide) === */}
+        <div className="flex flex-col gap-6 lg:col-span-2">
+          
+          {/* Environmental Trend Card (NOW A MAP) */}
+          <Card className="bg-[#1a1a1a] border-gray-800 text-white lg:h-96 flex flex-col">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-green-400">
+                <BarChart3 className="h-5 w-5" />
+                Environmental Trend
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 p-0 m-0"> {/* Use p-0 and m-0 for the map */}
+              {/* 2. RENDER YOUR MAP COMPONENT HERE
+                You will pass the data it needs as props.
+              */}
+              {/* <EnvironmentalMap
+                centerLocation={location}
+                heatmapData={heatmapData}
+              /> */}
+
+              {/* Placeholder for now: */}
+              <div className="flex items-center justify-center h-full text-gray-600">
+                [Google Map Component Placeholder]
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Sub-grid for Primary Visualizer & Biometric */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
+            
+            {/* Primary Visualizer Card (NOW SHOWS GAS LEVEL) */}
+            <Card className="bg-[#1a1a1a] border-gray-800 text-white flex-1 flex flex-col">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-green-400">
+                  <MapPin className="h-5 w-5" />
+                  Primary Visualizer
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col items-center justify-center">
+                {/* 3. MOVED gasLevel DATA HERE */}
+                <p className="text-gray-400 mb-2">Current Gas Status:</p>
+                <h3 className="text-2xl font-bold text-green-400 text-center">
+                  {gasLevel || "N/A"}
+                </h3>
+              </CardContent>
+            </Card>
+
+            {/* Biometric Feed Card */}
+            <Card className="bg-[#1a1a1a] border-gray-800 text-white flex-1 flex flex-col">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-green-400">
+                  <HeartPulse className="h-5 w-5" />
+                  Biometric Feed (Soldier)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col items-center justify-center">
+                <p className="text-gray-600">[Heart Rate / SpO2 Chart]</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* === COLUMN 3 (Narrow) === */}
+        <div className="flex flex-col gap-6">
+          <Card className="bg-[#1a1a1a] border-gray-800 text-white">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-green-400">
+                <Server className="h-5 w-5" />
+                System Health
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-3">
+                <li className="flex items-center justify-between">
+                  <span>Main CPU</span>
+                  <Badge className="bg-green-500 text-black font-semibold">OPERATIONAL</Badge>
+                </li>
+                {/* ... other items ... */}
+                <li className="flex items-center justify-between">
+                  <span>GPS Module</span>
+                  <Badge className="bg-yellow-500 text-black font-semibold">WARNING</Badge>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-[#1a1a1a] border-gray-800 text-white flex-1 flex flex-col">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-green-400">
+                <Compass className="h-5 w-5" />
+                Compass
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col items-center justify-center">
+              <p className="text-gray-600">[Compass Placeholder]</p>
+            </CardContent>
+          </Card>
+        </div>
       </main>
     </div>
   );

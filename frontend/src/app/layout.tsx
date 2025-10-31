@@ -1,4 +1,5 @@
 ﻿import './globals.css'
+import 'leaflet/dist/leaflet.css' // <-- 1. ADD THIS IMPORT
 import React from 'react'
 import Navbar from '../components/Navbar'
 import { AppThemeProvider } from './theme-provider'
@@ -14,25 +15,24 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-  <html lang="en" suppressHydrationWarning>
-    <body>
-      <AppThemeProvider>
-        <div className="min-h-screen flex flex-col">
-          <header className="w-full">
-            <Navbar />
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <AppThemeProvider>
+          {/* 2. ADDED RESPONSIVE BACKGROUND */}
+          <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black">
+            <header className="w-full">
+              <Navbar />
             </header>
             
-            {/* This is the corrected line: 
-              Removed "container", "mx-auto", "px-4", and "py-8"
-            */}
             <main className="flex-1">{children}</main>
             
-            <footer className="text-center py-4 text-sm text-slate-500">
+            {/* 3. ADDED RESPONSIVE FOOTER TEXT */}
+            <footer className="text-center py-4 text-sm text-slate-500 dark:text-slate-400">
               {new Date().getFullYear()} Naakshatra — Hackathon build
-              </footer>
-              </div>
-              </AppThemeProvider>
-              </body>
-              </html>
-              )
-            }
+            </footer>
+          </div>
+        </AppThemeProvider>
+      </body>
+    </html>
+  )
+}
