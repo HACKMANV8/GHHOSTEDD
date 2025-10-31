@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Loader2,
   Target,
@@ -17,9 +20,10 @@ import {
   CheckCircle2,
   Calendar,
   Shield,
-  LogOut
+  LogOut,
+  Plus,
 } from "lucide-react";
-import { authService } from '@/lib/api';
+import { authService, missionService } from '@/lib/api';
 
 interface Mission {
   id: string;
@@ -35,85 +39,66 @@ interface Mission {
 
 export default function MissionsPage() {
   const router = useRouter();
-  const [missions] = useState<Mission[]>([
-    {
-      id: "ALPHA-001",
-      title: "Tactical Reconnaissance Mission",
-      description: "Conduct surveillance and gather intelligence on hostile territory sector 7-B",
-      status: "active",
-      priority: "high",
-      location: "Sector 7-B, Grid 42N",
-      assignedTeam: "Alpha Squad",
-      startDate: "2025-11-01",
-      estimatedDuration: "6 hours"
-    },
-    {
-      id: "BRAVO-002",
-      title: "Equipment Recovery Operation",
-      description: "Retrieve critical communication equipment from abandoned outpost",
-      status: "active",
-      priority: "medium",
-      location: "Outpost Delta-9",
-      assignedTeam: "Bravo Team",
-      startDate: "2025-11-02",
-      estimatedDuration: "4 hours"
-    },
-    {
-      id: "CHARLIE-003",
-      title: "Perimeter Security Sweep",
-      description: "Routine security patrol and threat assessment of designated zone",
-      status: "upcoming",
-      priority: "low",
-      location: "Zone 3, Perimeter Echo",
-      assignedTeam: "Charlie Unit",
-      startDate: "2025-11-03",
-      estimatedDuration: "8 hours"
-    },
-    {
-      id: "DELTA-004",
-      title: "Emergency Medical Evacuation",
-      description: "Extract injured personnel from hot zone with air support",
-      status: "completed",
-      priority: "high",
-      location: "Hot Zone Alpha",
-      assignedTeam: "Delta Force",
-      startDate: "2025-10-30",
-      estimatedDuration: "2 hours"
-    },
-  ]);
-  
-  const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
-  const [missionId, setMissionId] = useState('');
+  const [mission, setMission] = useState<Mission | null>(null);
+  const [allMissions, setAllMissions] = useState<Mission[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showIdModal, setShowIdModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creating, setCreating] = useState(false);
 
-  const handleMissionClick = (mission: Mission) => {
-    setSelectedMission(mission);
-    setShowIdModal(true);
-    setError('');
-    setMissionId('');
-  };
+  // Form state
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    status: 'upcoming' as 'active' | 'completed' | 'upcoming',
+    priority: 'medium' as 'high' | 'medium' | 'low',
+    location: '',
+    assignedTeam: '',
+    startDate: '',
+    estimatedDuration: '',
+  });
 
-  const handleEnterMission = (e: React.FormEvent) => {
+  // Fetch missions
+  useEffect(() => {
+    const fetchMissions = async () => {
+      try {
+        const data = await missionService.getMyMissions();
+        setAllMissions(data);
+        setMission(data[0] || null); // Show only first mission
+      } catch (err: any) {
+        setError(err.message || 'Failed to load missions');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMissions();
+  }, []);
+
+  const handleCreateMission = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCreating(true);
     setError('');
-    setLoading(true);
 
-    // Validate mission ID
-    if (missionId.trim().toUpperCase() !== selectedMission?.id) {
-      setError('Invalid Mission ID. Please check and try again.');
-      setLoading(false);
-      return;
+    try {
+      const newMission = await missionService.createMission(form);
+      setAllMissions(prev => [newMission, ...prev]);
+      setMission(newMission);
+      setShowCreateModal(false);
+      setForm({
+        title: '',
+        description: '',
+        status: 'upcoming',
+        priority: 'medium',
+        location: '',
+        assignedTeam: '',
+        startDate: '',
+        estimatedDuration: '',
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to create mission');
+    } finally {
+      setCreating(false);
     }
-
-    // Store mission in localStorage
-    localStorage.setItem('currentMission', JSON.stringify(selectedMission));
-    
-    // Redirect to home page
-    setTimeout(() => {
-      router.push('/home');
-    }, 500);
   };
 
   const handleLogout = async () => {
@@ -152,6 +137,20 @@ export default function MissionsPage() {
     }
   };
 
+  // Stats
+  const activeCount = allMissions.filter(m => m.status === 'active').length;
+  const upcomingCount = allMissions.filter(m => m.status === 'upcoming').length;
+  const completedCount = allMissions.filter(m => m.status === 'completed').length;
+  const highPriorityCount = allMissions.filter(m => m.priority === 'high').length;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-green-400" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
@@ -162,7 +161,7 @@ export default function MissionsPage() {
               <Shield className="h-8 w-8 text-green-400" />
               <div>
                 <h1 className="text-2xl font-bold text-green-400">Mission Control</h1>
-                <p className="text-sm text-gray-400">Select your active deployment</p>
+                <p className="text-sm text-gray-400">Your active deployment</p>
               </div>
             </div>
             <button
@@ -178,6 +177,12 @@ export default function MissionsPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {error && (
+          <Alert variant="destructive" className="mb-6 bg-red-900/20 border-red-900 text-red-400">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         {/* Stats Bar */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card className="bg-[#1a1a1a] border-gray-800">
@@ -185,9 +190,7 @@ export default function MissionsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-400 text-sm">Active Missions</p>
-                  <p className="text-2xl font-bold text-green-400">
-                    {missions.filter(m => m.status === 'active').length}
-                  </p>
+                  <p className="text-2xl font-bold text-green-400">{activeCount}</p>
                 </div>
                 <Target className="h-8 w-8 text-green-400" />
               </div>
@@ -199,9 +202,7 @@ export default function MissionsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-400 text-sm">Upcoming</p>
-                  <p className="text-2xl font-bold text-blue-400">
-                    {missions.filter(m => m.status === 'upcoming').length}
-                  </p>
+                  <p className="text-2xl font-bold text-blue-400">{upcomingCount}</p>
                 </div>
                 <Clock className="h-8 w-8 text-blue-400" />
               </div>
@@ -213,9 +214,7 @@ export default function MissionsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-400 text-sm">Completed</p>
-                  <p className="text-2xl font-bold text-gray-400">
-                    {missions.filter(m => m.status === 'completed').length}
-                  </p>
+                  <p className="text-2xl font-bold text-gray-400">{completedCount}</p>
                 </div>
                 <CheckCircle2 className="h-8 w-8 text-gray-400" />
               </div>
@@ -227,9 +226,7 @@ export default function MissionsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-400 text-sm">High Priority</p>
-                  <p className="text-2xl font-bold text-red-400">
-                    {missions.filter(m => m.priority === 'high').length}
-                  </p>
+                  <p className="text-2xl font-bold text-red-400">{highPriorityCount}</p>
                 </div>
                 <AlertTriangle className="h-8 w-8 text-red-400" />
               </div>
@@ -237,132 +234,201 @@ export default function MissionsPage() {
           </Card>
         </div>
 
-        {/* Missions Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {missions.map((mission) => (
-            <Card
-              key={mission.id}
-              className="bg-[#1a1a1a] border-gray-800 hover:border-green-400 transition-all cursor-pointer transform hover:scale-105"
-              onClick={() => handleMissionClick(mission)}
+        {/* Mission + Add Button */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left: Current Mission */}
+          <div>
+            <h2 className="text-xl font-semibold text-green-400 mb-4">Current Mission</h2>
+            {mission ? (
+              <Card 
+                className="bg-[#1a1a1a] border-gray-800 hover:border-green-400 transition-all cursor-pointer"
+                onClick={() => {
+                  localStorage.setItem('currentMission', JSON.stringify(mission));
+                  router.push('/home');
+                }}
+              >
+                <CardHeader>
+                  <div className="flex items-start justify-between mb-2">
+                    <Badge className={getStatusColor(mission.status)}>
+                      <span className="flex items-center gap-1">
+                        {getStatusIcon(mission.status)}
+                        {mission.status.toUpperCase()}
+                      </span>
+                    </Badge>
+                    <Badge className={getPriorityColor(mission.priority)}>
+                      {mission.priority.toUpperCase()}
+                    </Badge>
+                  </div>
+                  <CardTitle className="text-green-400 text-lg">{mission.title}</CardTitle>
+                  <CardDescription className="text-gray-400 text-sm">
+                    Mission ID: {mission.id}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-300 text-sm mb-4">{mission.description}</p>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <MapPin className="h-4 w-4" />
+                      <span>{mission.location}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <Users className="h-4 w-4" />
+                      <span>{mission.assignedTeam}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <Calendar className="h-4 w-4" />
+                      <span>{mission.startDate}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <Clock className="h-4 w-4" />
+                      <span>{mission.estimatedDuration}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="text-center py-12 text-gray-500 bg-[#1a1a1a] rounded-lg border border-dashed border-gray-700">
+                No active mission. Create one to begin.
+              </div>
+            )}
+          </div>
+
+          {/* Right: Add Mission */}
+          <div className="flex items-center justify-center">
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="group flex flex-col items-center justify-center w-48 h-48 bg-[#1a1a1a] border-2 border-dashed border-gray-600 rounded-xl hover:border-green-400 hover:bg-[#0f1a0f] transition-all"
             >
-              <CardHeader>
-                <div className="flex items-start justify-between mb-2">
-                  <Badge className={getStatusColor(mission.status)}>
-                    <span className="flex items-center gap-1">
-                      {getStatusIcon(mission.status)}
-                      {mission.status.toUpperCase()}
-                    </span>
-                  </Badge>
-                  <Badge className={getPriorityColor(mission.priority)}>
-                    {mission.priority.toUpperCase()}
-                  </Badge>
-                </div>
-                <CardTitle className="text-green-400 text-lg">{mission.title}</CardTitle>
-                <CardDescription className="text-gray-400 text-sm">
-                  Mission ID: {mission.id}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-300 text-sm mb-4">{mission.description}</p>
-                
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2 text-gray-400">
-                    <MapPin className="h-4 w-4" />
-                    <span>{mission.location}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-gray-400">
-                    <Users className="h-4 w-4" />
-                    <span>{mission.assignedTeam}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-gray-400">
-                    <Calendar className="h-4 w-4" />
-                    <span>{mission.startDate}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-gray-400">
-                    <Clock className="h-4 w-4" />
-                    <span>{mission.estimatedDuration}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+              <Plus className="h-16 w-16 text-gray-500 group-hover:text-green-400 transition-colors" />
+              <span className="mt-3 text-lg font-semibold text-gray-400 group-hover:text-green-400">
+                Add Mission
+              </span>
+            </button>
+          </div>
         </div>
       </main>
 
-      {/* Mission ID Modal */}
-      {showIdModal && selectedMission && (
+      {/* Create Mission Modal */}
+      {showCreateModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-md bg-[#1a1a1a] border-gray-800">
+          <Card className="w-full max-w-2xl bg-[#1a1a1a] border-gray-800">
             <CardHeader>
               <CardTitle className="text-green-400 flex items-center gap-2">
                 <Target className="h-6 w-6" />
-                Enter Mission
+                Create New Mission
               </CardTitle>
-              <CardDescription className="text-gray-400">
-                {selectedMission.title}
-              </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleEnterMission} className="space-y-4">
-                {error && (
-                  <Alert variant="destructive" className="bg-red-900/20 border-red-900 text-red-400">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="bg-[#0a0a0a] p-4 rounded-lg border border-gray-800">
-                  <p className="text-sm text-gray-400 mb-2">Mission Details:</p>
-                  <p className="text-white font-semibold">{selectedMission.title}</p>
-                  <p className="text-gray-400 text-sm">Location: {selectedMission.location}</p>
-                  <p className="text-gray-400 text-sm">Team: {selectedMission.assignedTeam}</p>
+              <form onSubmit={handleCreateMission} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Title</Label>
+                    <Input
+                      id="title"
+                      value={form.title}
+                      onChange={(e) => setForm({ ...form, title: e.target.value })}
+                      required
+                      className="bg-[#0a0a0a] border-gray-700 text-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="priority">Priority</Label>
+                    <Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v as any })}>
+                      <SelectTrigger className="bg-[#0a0a0a] border-gray-700">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="missionId" className="text-gray-300">
-                    Enter Mission ID to Confirm
-                  </Label>
-                  <Input
-                    id="missionId"
-                    name="missionId"
-                    type="text"
-                    placeholder="e.g., ALPHA-001"
-                    value={missionId}
-                    onChange={(e) => setMissionId(e.target.value)}
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
                     required
-                    className="bg-[#0a0a0a] border-gray-700 text-white placeholder:text-gray-500 focus:border-green-400 uppercase"
+                    rows={3}
+                    className="bg-[#0a0a0a] border-gray-700 text-white"
                   />
-                  <p className="text-xs text-gray-500">
-                    Hint: Mission ID is displayed on the mission card
-                  </p>
                 </div>
 
-                <div className="flex gap-3">
-                  <button
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Location</Label>
+                    <Input
+                      id="location"
+                      value={form.location}
+                      onChange={(e) => setForm({ ...form, location: e.target.value })}
+                      required
+                      className="bg-[#0a0a0a] border-gray-700 text-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="assignedTeam">Assigned Team</Label>
+                    <Input
+                      id="assignedTeam"
+                      value={form.assignedTeam}
+                      onChange={(e) => setForm({ ...form, assignedTeam: e.target.value })}
+                      required
+                      className="bg-[#0a0a0a] border-gray-700 text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="startDate">Start Date</Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={form.startDate}
+                      onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                      required
+                      className="bg-[#0a0a0a] border-gray-700 text-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="estimatedDuration">Estimated Duration</Label>
+                    <Input
+                      id="estimatedDuration"
+                      value={form.estimatedDuration}
+                      onChange={(e) => setForm({ ...form, estimatedDuration: e.target.value })}
+                      required
+                      placeholder="e.g., 6 hours"
+                      className="bg-[#0a0a0a] border-gray-700 text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
                     type="button"
-                    onClick={() => {
-                      setShowIdModal(false);
-                      setSelectedMission(null);
-                      setMissionId('');
-                      setError('');
-                    }}
-                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-colors"
+                    variant="outline"
+                    onClick={() => setShowCreateModal(false)}
+                    className="flex-1"
                   >
                     Cancel
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="submit"
-                    disabled={loading}
-                    className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    disabled={creating}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
                   >
-                    {loading ? (
+                    {creating ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Entering...
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Creating...
                       </>
                     ) : (
-                      'Enter Mission'
+                      'Create Mission'
                     )}
-                  </button>
+                  </Button>
                 </div>
               </form>
             </CardContent>
