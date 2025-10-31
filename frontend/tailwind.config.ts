@@ -7,22 +7,25 @@ const config: Config = {
     './src/pages/**/*.{ts,tsx,js,jsx}',
     './src/**/*.{ts,tsx,js,jsx}'
   ],
-  darkMode: ['class', '[data-theme="dark"]'],
+  darkMode: ['class', '[data-theme="dark"]'], 
   theme: {
     extend: {
       colors: {
-        // Light mode colors
-        light: {
-          bg: '#f4f1eb',
-          text: '#2d3021',
-          accent: '#4d7c0f',
+        // These tell Tailwind to use your CSS variables
+        background: 'var(--background)',
+        foreground: 'var(--foreground)',
+        card: {
+          DEFAULT: 'var(--card)',
+          foreground: 'var(--card-foreground)',
         },
-        // Dark mode colors
-        dark: {
-          bg: '#071011',
-          text: '#e5e7eb',
-          accent: '#66ff66',
-        }
+        muted: {
+          DEFAULT: 'var(--muted)',
+          foreground: 'var(--muted-foreground)',
+        },
+        danger: 'var(--danger)',
+        'accent-green': 'var(--accent-green)',
+        'accent-brown': 'var(--accent-brown)',
+        'brand-green': 'var(--brand-green)',
       }
     }
   },

@@ -4,7 +4,8 @@ import axios from 'axios';
 // ---------------------------------------------------------------
 // 1. BASE URL
 // ---------------------------------------------------------------
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
 // ---------------------------------------------------------------
 // 2. AXIOS CONFIG
@@ -12,77 +13,28 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 axios.defaults.withCredentials = true;
 axios.defaults.headers.common['Content-Type'] = 'application/json';
 
-if (process.env.NODE_ENV === 'development') {
-  axios.interceptors.request.use((config) => {
-    console.log('[API]', config.method?.toUpperCase(), config.url);
-    return config;
-  });
+// ---------------------------------------------------------------
+// 3. TOKEN MANAGEMENT
+// ---------------------------------------------------------------
+let authToken: string | null = null;
+
+export const setAuthToken = (token: string | null) => {
+  authToken = token;
+  if (token) {
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  } else {
+    delete axios.defaults.headers.common['Authorization'];
+  }
+};
+
+// Restore token on app load
+if (typeof window !== 'undefined') {
+  const saved = localStorage.getItem('authToken');
+  if (saved) setAuthToken(saved);
 }
 
 // ---------------------------------------------------------------
-// 3. NODE SERVICE
-// ---------------------------------------------------------------
-export const nodeService = {
-  startHeatmap: async () => {
-    const { data } = await axios.get(`${BASE_URL}/heatmap`);
-    return data;
-  },
-  getGasLevel: async () => {
-    const { data } = await axios.get(`${BASE_URL}/gaslevel`);
-    return data;
-  },
-  getLocation: async () => {
-    const { data } = await axios.get(`${BASE_URL}/loc`);
-    return data;
-  },
-};
-
-// ---------------------------------------------------------------
-// 4. AUTH SERVICE – FULLY RESTORED
-// ---------------------------------------------------------------
-export const authService = {
-  signup: async (email: string, password: string, name: string) => {
-    const { data } = await axios.post(`${BASE_URL}/auth/register`, {
-      email,
-      password,
-      name,
-    });
-    return data;
-  },
-
-  login: async (username: string, password: string) => {
-    const { data } = await axios.post(`${BASE_URL}/auth/login`, {
-      username,
-      password,
-    });
-    return data;
-  },
-
-  logout: async () => {
-    await axios.post(`${BASE_URL}/auth/logout`);
-  },
-
-  getCurrentUser: async () => {
-    try {
-      const { data } = await axios.get(`${BASE_URL}/auth/me`);
-      return data;
-    } catch {
-      return null;
-    }
-  },
-
-  verifyToken: async () => {
-    try {
-      await axios.get(`${BASE_URL}/auth/verify`);
-      return true;
-    } catch {
-      return false;
-    }
-  },
-};
-
-// ---------------------------------------------------------------
-// 5. MISSION SERVICE – MATCHES MONGOOSE SCHEMA
+// 4. INTERFACES
 // ---------------------------------------------------------------
 export interface MissionBackend {
   _id: string;
@@ -106,24 +58,79 @@ export interface MissionFrontend {
   estimatedDuration: string;
 }
 
-// Map backend → frontend
-const mapToFrontend = (m: MissionBackend): MissionFrontend => ({
-  id: m._id,
-  title: m.name,
-  description: m.description || '',
-  status: 'upcoming' as const,
-  priority: 'medium' as const,
-  location: m.location || '',
-  assignedTeam: m.nodes.join(', '),
-  startDate: new Date(m.createdAt).toISOString().split('T')[0],
-  estimatedDuration: 'N/A',
-});
+const mapToFrontend = (m: MissionBackend): MissionFrontend => {
+  const createdAtDate = new Date(m.createdAt);
+  const startDate = isNaN(createdAtDate.getTime()) 
+    ? new Date().toISOString().split('T')[0]  // fallback
+    : createdAtDate.toISOString().split('T')[0];
 
+  return {
+    id: m._id,
+    title: m.name,
+    description: m.description || '',
+    status: 'upcoming' as const,
+    priority: 'medium' as const,
+    location: m.location || '',
+    assignedTeam: m.nodes.join(', '),
+    startDate,
+    estimatedDuration: 'N/A',
+  };
+};
+
+// ---------------------------------------------------------------
+// 5. AUTH SERVICE – WITH signup RESTORED
+// ---------------------------------------------------------------
+export const authService = {
+  signup: async (email: string, password: string, name: string) => {
+    const { data } = await axios.post(`${BASE_URL}/auth/register`, {
+      email,
+      password,
+      name,
+    });
+    return data;
+  },
+
+  login: async (username: string, password: string) => {
+    const { data } = await axios.post(`${BASE_URL}/auth/login`, {
+      username,
+      password,
+    });
+
+    if (data.token) {
+      setAuthToken(data.token);
+      localStorage.setItem('authToken', data.token);
+    }
+
+    return data;
+  },
+
+  logout: async () => {
+    try {
+      await axios.post(`${BASE_URL}/auth/logout`);
+    } catch (err) {
+      console.warn('Logout failed on backend');
+    }
+    setAuthToken(null);
+    localStorage.removeItem('authToken');
+  },
+};
+
+// ---------------------------------------------------------------
+// 6. MISSION SERVICE
+// ---------------------------------------------------------------
 export const missionService = {
   getMyMissions: async (): Promise<MissionFrontend[]> => {
-    const { data } = await axios.get<MissionBackend[]>(`${BASE_URL}/missions`);
-    return data.map(mapToFrontend);
-  },
+  try {
+    const { data } = await axios.get<any>(`${BASE_URL}/missions`);
+    console.log('Raw /missions response:', data);
+
+    const missions = Array.isArray(data) ? data : data.missions || [];
+    return missions.map(mapToFrontend);
+  } catch (err: any) {
+    console.error('getMyMissions error:', err.response?.data || err.message);
+    throw err;
+  }
+},
 
   createMission: async (mission: {
     title: string;
@@ -142,5 +149,23 @@ export const missionService = {
 
     const { data } = await axios.post<MissionBackend>(`${BASE_URL}/missions`, payload);
     return mapToFrontend(data);
+  },
+};
+
+// ---------------------------------------------------------------
+// 7. NODE SERVICE (optional)
+// ---------------------------------------------------------------
+export const nodeService = {
+  startHeatmap: async () => {
+    const { data } = await axios.get(`${BASE_URL}/heatmap`);
+    return data;
+  },
+  getGasLevel: async () => {
+    const { data } = await axios.get(`${BASE_URL}/gaslevel`);
+    return data;
+  },
+  getLocation: async () => {
+    const { data } = await axios.get(`${BASE_URL}/loc`);
+    return data;
   },
 };

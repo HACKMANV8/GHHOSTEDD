@@ -29,16 +29,18 @@ export default function LoginForm() {
     setLoading(true);
 
     try {
-      const result = await authService.login(formData.username, formData.password);
+      // authService.login() saves token in localStorage + attaches to axios
+      await authService.login(formData.username, formData.password);
 
-      if (result.user) {
-        localStorage.setItem("user", JSON.stringify(result.user));
-      }
-
+      // Redirect to missions
       router.push("/missions");
-      router.refresh();
     } catch (err: any) {
-      setError(err.message || "Invalid username or password");
+      // Show backend error message if available
+      const message =
+        err.response?.data?.message ||
+        err.message ||
+        "Invalid username or password";
+      setError(message);
     } finally {
       setLoading(false);
     }

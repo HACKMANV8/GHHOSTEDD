@@ -20,7 +20,7 @@ import {
 import EnvironmentalMap from '@/components/EnvironmentalMap';
 
 /* -------------------------------------------------------------------------- */
-/*                              DATA TYPES                                    */
+/* DATA TYPES                                */
 /* -------------------------------------------------------------------------- */
 interface HeatmapPoint {
   lat: number;
@@ -33,7 +33,7 @@ interface LocationResponse {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                              COMPASS COMPONENT                             */
+/* COMPASS COMPONENT                             */
 /* -------------------------------------------------------------------------- */
 interface CompassProps {
   nodeLocation: [number, number];
@@ -82,12 +82,14 @@ function Compass({ nodeLocation, heatmapData }: CompassProps) {
   return (
     <div className="flex flex-col items-center">
       <div className="relative w-32 h-32 mx-auto">
-        <div className="absolute inset-0 rounded-full border-4 border-green-400/30" />
+        {/* CHANGED: Now uses your theme variable */}
+        <div className="absolute inset-0 rounded-full border-4 border-accent-green/30" />
 
         {["N", "E", "S", "W"].map((dir, i) => (
           <span
             key={dir}
-            className="absolute text-green-400 text-xs font-bold"
+            // CHANGED: Now uses your theme variable
+            className="absolute text-accent-green text-xs font-bold"
             style={{
               top: i === 0 ? "-8px" : i === 2 ? "auto" : "50%",
               bottom: i === 2 ? "-8px" : "auto",
@@ -104,21 +106,25 @@ function Compass({ nodeLocation, heatmapData }: CompassProps) {
           className="absolute inset-0 flex items-center justify-center transition-transform duration-300"
           style={{ transform: `rotate(${bearing}deg)` }}
         >
-          <div className="w-1 h-12 bg-green-400 rounded-t-full shadow-lg" />
+          {/* CHANGED: Now uses your theme variable */}
+          <div className="w-1 h-12 bg-accent-green rounded-t-full shadow-lg" />
           <div className="w-1 h-12 bg-red-600 rounded-b-full -mt-12 shadow-lg" />
         </div>
 
-        <div className="absolute top-1/2 left-1/2 w-3 h-3 bg-green-400 rounded-full transform -translate-x-1/2 -translate-y-1/2 shadow-md" />
+        {/* CHANGED: Now uses your theme variable */}
+        <div className="absolute top-1/2 left-1/2 w-3 h-3 bg-accent-green rounded-full transform -translate-x-1/2 -translate-y-1/2 shadow-md" />
       </div>
 
-      <div className="mt-3 text-green-400 font-mono text-sm">{bearing.toFixed(0)}°</div>
-      <div className="text-xs text-gray-500 mt-1">Nearest hotspot</div>
+      {/* CHANGED: Now uses your theme variable */}
+      <div className="mt-3 text-accent-green font-mono text-sm">{bearing.toFixed(0)}°</div>
+      {/* CORRECT: This class matches your theme file */}
+      <div className="text-xs text-muted-foreground mt-1">Nearest hotspot</div>
     </div>
   );
 }
 
 /* -------------------------------------------------------------------------- */
-/*                               MAIN PAGE                                    */
+/* MAIN PAGE                                 */
 /* -------------------------------------------------------------------------- */
 export default function NodePage() {
   const [heatmapData, setHeatmapData] = useState<HeatmapPoint[]>([]);
@@ -172,20 +178,24 @@ export default function NodePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      // CORRECT: These classes match your theme file
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="flex items-center gap-2">
-          <Loader2 className="h-6 w-6 animate-spin text-green-400" />
-          <span className="text-green-400 text-lg">Loading node data...</span>
+          {/* CHANGED: Now uses your theme variable */}
+          <Loader2 className="h-6 w-6 animate-spin text-accent-green" />
+          <span className="text-accent-green text-lg">Loading node data...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="text-white p-4 md:p-6">
+    <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-green-400">Node</h1>
-        <Badge variant="outline" className="text-green-400 border-green-400">
+        {/* CHANGED: Now uses your theme variable */}
+        <h1 className="text-3xl font-bold text-accent-green">Node</h1>
+        {/* CHANGED: Now uses your theme variable */}
+        <Badge variant="outline" className="text-accent-green border-accent-green">
           NODE_ALPHA-01
         </Badge>
       </div>
@@ -194,13 +204,15 @@ export default function NodePage() {
 
         {/* COLUMN 1 */}
         <div className="flex flex-col gap-6">
-          <Card className="bg-[#1a1a1a] border-gray-800 text-white">
+          {/* CORRECT: These classes match your theme file */}
+          <Card className="bg-card text-card-foreground border">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-green-400">
+              <CardTitle className="flex items-center gap-2 text-accent-green">
                 <Terminal className="h-5 w-5" /> Command & Comms
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3 pt-0">
+              {/* Note: These buttons are hard-coded and not theme-aware */}
               <button className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
                 TRANSMIT SOS
               </button>
@@ -210,9 +222,10 @@ export default function NodePage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-[#1a1a1a] border-gray-800 text-white">
+          {/* CORRECT: These classes match your theme file */}
+          <Card className="bg-card text-card-foreground border">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-green-400">
+              <CardTitle className="flex items-center gap-2 text-accent-green">
                 <Users className="h-5 w-5" /> Unit Roster
               </CardTitle>
             </CardHeader>
@@ -230,21 +243,25 @@ export default function NodePage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-[#1a1a1a] border-gray-800 text-white flex-1">
+          {/* CORRECT: These classes match your theme file */}
+          <Card className="bg-card text-card-foreground border flex-1">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-green-400">
+              <CardTitle className="flex items-center gap-2 text-accent-green">
                 <AlertTriangle className="h-5 w-5" /> Recent Alerts
               </CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="space-y-3">
-                <li className="text-yellow-400">
+                {/* KEPT: Using standard Tailwind yellow. You can create a '--warning' variable if you prefer */}
+                <li className="text-yellow-600 dark:text-yellow-400">
                   <span className="font-bold">14:32</span> - CAUTION: Methane spike (Grid 4C)
                 </li>
-                <li className="text-red-500">
+                {/* CHANGED: Now uses your theme variable */}
+                <li className="text-danger">
                   <span className="font-bold">14:28</span> - DANGER: CO2 Levels Critical (Grid 4B)
                 </li>
-                <li className="text-gray-400">
+                {/* CORRECT: This class matches your theme file */}
+                <li className="text-muted-foreground">
                   <span className="font-bold">14:25</span> - INFO: Comms re-established
                 </li>
               </ul>
@@ -254,9 +271,10 @@ export default function NodePage() {
 
         {/* COLUMN 2 */}
         <div className="flex flex-col gap-6 lg:col-span-2">
-          <Card className="bg-[#1a1a1a] border-gray-800 text-white lg:h-96 flex flex-col">
+          {/* CORRECT: These classes match your theme file */}
+          <Card className="bg-card text-card-foreground border lg:h-96 flex flex-col">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-green-400">
+              <CardTitle className="flex items-center gap-2 text-accent-green">
                 <BarChart3 className="h-5 w-5" /> Environmental Trend
               </CardTitle>
             </CardHeader>
@@ -266,28 +284,33 @@ export default function NodePage() {
           </Card>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="bg-[#1a1a1a] border-gray-800 text-white">
+            {/* CORRECT: These classes match your theme file */}
+            <Card className="bg-card text-card-foreground border">
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-green-400">
+                <CardTitle className="flex items-center gap-2 text-accent-green">
                   <MapPin className="h-5 w-5" /> Primary Visualizer
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col items-center justify-center py-4">
-                <p className="text-gray-400 text-sm mb-1">Current Gas Status:</p>
-                <h3 className="text-2xl font-bold text-green-400 text-center">
+                {/* CORRECT: This class matches your theme file */}
+                <p className="text-muted-foreground text-sm mb-1">Current Gas Status:</p>
+                {/* CHANGED: Now uses your theme variable */}
+                <h3 className="text-2xl font-bold text-accent-green text-center">
                   {gasLevel || "N/A"}
                 </h3>
               </CardContent>
             </Card>
 
-            <Card className="bg-[#1a1a1a] border-gray-800 text-white">
+            {/* CORRECT: These classes match your theme file */}
+            <Card className="bg-card text-card-foreground border">
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-green-400">
+                <CardTitle className="flex items-center gap-2 text-accent-green">
                   <HeartPulse className="h-5 w-5" /> Biometric Feed (Soldier)
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col items-center justify-center py-4">
-                <p className="text-gray-600">[Heart Rate / SpO2 Chart]</p>
+                {/* CORRECT: This class matches your theme file */}
+                <p className="text-muted-foreground">[Heart Rate / SpO2 Chart]</p>
               </CardContent>
             </Card>
           </div>
@@ -295,9 +318,10 @@ export default function NodePage() {
 
         {/* COLUMN 3 */}
         <div className="flex flex-col gap-6">
-          <Card className="bg-[#1a1a1a] border-gray-800 text-white">
+          {/* CORRECT: These classes match your theme file */}
+          <Card className="bg-card text-card-foreground border">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-green-400">
+              <CardTitle className="flex items-center gap-2 text-accent-green">
                 <Server className="h-5 w-5" /> System Health
               </CardTitle>
             </CardHeader>
@@ -315,9 +339,10 @@ export default function NodePage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-[#1a1a1a] border-gray-800 text-white">
+          {/* CORRECT: These classes match your theme file */}
+          <Card className="bg-card text-card-foreground border">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-green-400">
+              <CardTitle className="flex items-center gap-2 text-accent-green">
                 <CompassIcon className="h-5 w-5" /> Compass
               </CardTitle>
             </CardHeader>

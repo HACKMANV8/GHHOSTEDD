@@ -1,55 +1,43 @@
 ﻿"use client"
-// 1. Import useState, useEffect, and useRef for the dropdown
+
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-// 2. Import ChevronDown for the dropdown icon
-import { Target, LayoutDashboard, Cpu, Sun, Moon, Home, ChevronDown } from 'lucide-react' 
+import { Target, LayoutDashboard, Cpu, Sun, Moon, Home, ChevronDown } from 'lucide-react'
 import { useTheme } from 'next-themes'
 
-// 3. Mock data for the node list (replace with your actual data)
 const nodes = [
-  { id: 'node-a1', name: 'NODE-A1' },
-  { id: 'node-l4', name: 'NODE-L4' },
-  { id: 'node-b2', name: 'NODE-B2' },
+  { id: 'node-a1', name: 'NODE-A1', status: 'OPERATIONAL' },
+  { id: 'node-l4', name: 'NODE-L4', status: 'WARNING' },
+  { id: 'node-b2', name: 'NODE-B2', status: 'OPERATIONAL' },
 ]
 
 export default function Navbar() {
-  const [greeting, setGreeting] = useState('');
+  const [greeting, setGreeting] = useState('')
   const [mounted, setMounted] = useState(false)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
   const { theme, setTheme, resolvedTheme } = useTheme()
 
-  // 4. State to manage the dropdown's visibility
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  // 5. Ref to detect clicks outside the dropdown
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // --- useEffects ---
   useEffect(() => {
     setMounted(true)
 
-    const getGreeting = () => {
-      // ... (greeting logic is unchanged)
-      const hour = new Date().getHours(); 
-      if (hour >= 5 && hour < 12) setGreeting('Good morning');
-      else if (hour >= 12 && hour < 18) setGreeting('Good afternoon');
-      else setGreeting('Good evening');
-    };
-    getGreeting();
+    // Greeting logic
+    const hour = new Date().getHours()
+    if (hour >= 5 && hour < 12) setGreeting('Good morning')
+    else if (hour >= 12 && hour < 18) setGreeting('Good afternoon')
+    else setGreeting('Good evening')
 
-    // 6. Effect to handle clicks outside the dropdown
+    // Close dropdown on outside click
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
+        setIsDropdownOpen(false)
       }
-    };
-    // Add event listener
-    document.addEventListener('mousedown', handleClickOutside);
-    // Cleanup
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    }
 
-  }, []); // Empty dependency array ensures this runs once on mount
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const toggleTheme = () => {
     const current = resolvedTheme || theme
@@ -57,26 +45,27 @@ export default function Navbar() {
   }
 
   if (!mounted) {
-    return <nav className="h-[69px]"></nav>;
+    return <nav className="h-[69px]"></nav>
   }
 
   return (
     <nav className="
-      sticky top-0 z-50 backdrop-blur-sm transition-all duration-300
-      border-b
-      bg-[color:var(--bg-secondary)]/90
-      border-[color:var(--accent-green)]/20
+      sticky top-0 z-50 
+      bg-black/95
+      backdrop-blur-xl
+      border-b border-emerald-500/30
+      transition-all duration-300
     ">
       <div className="w-full px-4 py-4 flex items-center justify-between">
         
-        {/* === LEFT SIDE (Logo) === */}
+        {/* === LEFT: Logo === */}
         <div className="flex-1">
           <Link 
             href="/" 
             className="
               flex items-center gap-2 text-xl font-bold tracking-wide
+              text-emerald-400 hover:text-emerald-300
               transition-colors duration-200
-              text-[color:var(--accent-green)] hover:text-[color:var(--accent-green)]/80
             "
           >
             <Target size={24} />
@@ -84,63 +73,88 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* === CENTER (Nav Links) === */}
+        {/* === CENTER: Nav Links === */}
         <div className="flex items-center gap-6">
           
           <Link 
             href="/" 
             className="
               flex items-center gap-1.5 font-medium
+              text-gray-400 hover:text-emerald-400
               transition-colors duration-200
-              text-[color:var(--text-secondary)]
-              hover:text-[color:var(--accent-green)]
             "
           >
             <Home size={18} />
             Home
           </Link>
 
-          {/* 7. Dropdown Menu */}
+          {/* === DROPDOWN MENU === */}
           <div className="relative" ref={dropdownRef}>
             <button 
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="
-                flex items-center gap-1.5 font-medium
-                transition-colors duration-200
-                text-[color:var(--text-secondary)]
-                hover:text-[color:var(--accent-green)]
-              "
+              className={`
+                flex items-center gap-1.5 font-medium rounded-md px-2 py-1
+                transition-all duration-200
+                ${isDropdownOpen 
+                  ? 'text-emerald-400 bg-gray-800/50' 
+                  : 'text-gray-400 hover:text-emerald-400'
+                }
+              `}
             >
               <Cpu size={18} />
               Cadet's Status
               <ChevronDown size={16} className={`transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
 
-            {/* 8. Dropdown Panel */}
+            {/* === DROPDOWN PANEL === */}
             {isDropdownOpen && (
               <div className="
-                absolute top-full left-0 mt-2 w-48
-                bg-[color:var(--bg-secondary)]
-                border border-[color:var(--accent-green)]/20
-                rounded-md shadow-lg py-1
+                absolute top-full left-0 mt-3 w-72 z-50
+                bg-gray-900
+                border border-emerald-500/50
+                rounded-xl shadow-2xl py-3
+                backdrop-blur-xl
+                ring-2 ring-emerald-500/20
+                overflow-hidden
+                animate-in fade-in-0 zoom-in-95 duration-100
               ">
-                {/* Add a link to the main node page if you have one */}
+                {/* Header */}
+                <div className="px-4 pb-2 border-b border-emerald-500/20">
+                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                    Nodes
+                  </p>
+                </div>
+
+                {/* Node Overview */}
                 <Link
                   href="/node"
-                  className="block px-4 py-2 text-sm text-[color:var(--text-primary)] hover:bg-[color:var(--bg-accent)]"
-                  onClick={() => setIsDropdownOpen(false)} // Close on click
+                  className="flex items-center justify-between px-4 py-3 text-sm text-gray-100 hover:bg-gray-800 transition-colors"
+                  onClick={() => setIsDropdownOpen(false)}
                 >
-                  Node
+                  <span className="flex items-center gap-2">
+                    <Cpu size={14} className="text-emerald-400" />
+                    Node Overview
+                  </span>
                 </Link>
-                {/* Map over your list of nodes */}
+
+                {/* Node List */}
                 {nodes.map((node) => (
-                  <Link 
+                  <Link
                     key={node.id}
                     href={`/node/${node.id}`}
-                    className="block px-4 py-2 text-sm text-[color:var(--text-primary)] hover:bg-[color:var(--bg-accent)]"
-                    onClick={() => setIsDropdownOpen(false)} // Close on click
+                    className="flex items-center justify-between px-4 py-3 text-sm text-gray-100 hover:bg-gray-800 transition-colors"
+                    onClick={() => setIsDropdownOpen(false)}
                   >
-                    {node.name}
+                    <span className="font-mono text-emerald-300">{node.name}</span>
+                    <span className={`
+                      text-xs px-2.5 py-0.5 rounded-full font-bold border
+                      ${node.status === 'WARNING'
+                        ? 'bg-orange-500/20 text-orange-400 border-orange-500/50'
+                        : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50'
+                      }
+                    `}>
+                      {node.status}
+                    </span>
                   </Link>
                 ))}
               </div>
@@ -151,9 +165,8 @@ export default function Navbar() {
             href="/admin" 
             className="
               flex items-center gap-1.5 font-medium
+              text-gray-400 hover:text-emerald-400
               transition-colors duration-200
-              text-[color:var(--text-secondary)]
-              hover:text-[color:var(--accent-green)]
             "
           >
             <LayoutDashboard size={18} />
@@ -161,19 +174,18 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* === RIGHT SIDE (Greeting & Theme Toggle) === */}
+        {/* === RIGHT: Greeting + Theme Toggle === */}
         <div className="flex-1 flex items-center justify-end gap-6">
-          {greeting && ( 
-            <span className="text-[color:var(--text-secondary)]">
+          {greeting && (
+            <span className="text-gray-400">
               {greeting}, Admin
             </span>
           )}
           <button 
             onClick={toggleTheme}
             className="
+              text-gray-400 hover:text-emerald-400
               transition-colors duration-200
-              text-[color:var(--text-secondary)]
-              hover:text-[color:var(--accent-green)]
             "
             aria-label="Toggle theme"
           >
@@ -184,7 +196,6 @@ export default function Navbar() {
             )}
           </button>
         </div>
-
       </div>
     </nav>
   )

@@ -1,3 +1,4 @@
+// app/missions/page.tsx
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -23,7 +24,7 @@ import {
   LogOut,
   Plus,
 } from "lucide-react";
-import { authService, missionService } from '@/lib/api';
+import { authService, missionService, setAuthToken } from '@/lib/api';
 
 interface Mission {
   id: string;
@@ -39,6 +40,27 @@ interface Mission {
 
 export default function MissionsPage() {
   const router = useRouter();
+
+  // ------------------------------------------------------------------
+  // 1. AUTH GUARD – redirect if token missing/expired
+  // ------------------------------------------------------------------
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+useEffect(() => {
+  const token = localStorage.getItem('authToken');
+  console.log('Token from localStorage:', token); // Debug
+
+  if (!token) {
+    router.replace('/login');
+    return;
+  }
+
+  // Token exists → allow missions to load
+  setCheckingAuth(false);
+}, [router]);
+  // ------------------------------------------------------------------
+  // 2. MISSIONS STATE
+  // ------------------------------------------------------------------
   const [mission, setMission] = useState<Mission | null>(null);
   const [allMissions, setAllMissions] = useState<Mission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,34 +68,53 @@ export default function MissionsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  // Form state
   const [form, setForm] = useState({
     title: '',
     description: '',
-    status: 'upcoming' as 'active' | 'completed' | 'upcoming',
-    priority: 'medium' as 'high' | 'medium' | 'low',
+    status: 'upcoming' as const,
+    priority: 'medium' as const,
     location: '',
     assignedTeam: '',
     startDate: '',
     estimatedDuration: '',
   });
 
-  // Fetch missions
+  // ------------------------------------------------------------------
+  // 3. FETCH MISSIONS (only after auth)
+  // ------------------------------------------------------------------
   useEffect(() => {
-    const fetchMissions = async () => {
-      try {
-        const data = await missionService.getMyMissions();
-        setAllMissions(data);
-        setMission(data[0] || null); // Show only first mission
-      } catch (err: any) {
-        setError(err.message || 'Failed to load missions');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchMissions();
-  }, []);
+  if (checkingAuth) {
+    console.log('Still checking auth...');
+    return;
+  }
 
+  console.log('Fetching missions...');
+
+ const fetchMissions = async () => {
+  try {
+    const data = await missionService.getMyMissions();
+    console.log('Raw missions data:', data); // Debug
+    setAllMissions(data || []);
+    setMission(data[0] || null);
+  } catch (err: any) {
+    console.error('Mission fetch error:', err);
+    setError(err.response?.data?.message || 'Failed to load missions');
+    if (err.response?.status === 401) {
+      localStorage.removeItem('authToken');
+      setAuthToken(null);
+      router.replace('/login');
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+
+  fetchMissions();
+}, [checkingAuth, router]);
+
+  // ------------------------------------------------------------------
+  // 4. CREATE MISSION
+  // ------------------------------------------------------------------
   const handleCreateMission = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
@@ -85,14 +126,8 @@ export default function MissionsPage() {
       setMission(newMission);
       setShowCreateModal(false);
       setForm({
-        title: '',
-        description: '',
-        status: 'upcoming',
-        priority: 'medium',
-        location: '',
-        assignedTeam: '',
-        startDate: '',
-        estimatedDuration: '',
+        title: '', description: '', status: 'upcoming', priority: 'medium',
+        location: '', assignedTeam: '', startDate: '', estimatedDuration: '',
       });
     } catch (err: any) {
       setError(err.message || 'Failed to create mission');
@@ -101,35 +136,35 @@ export default function MissionsPage() {
     }
   };
 
+  // ------------------------------------------------------------------
+  // 5. LOGOUT
+  // ------------------------------------------------------------------
   const handleLogout = async () => {
-    try {
-      await authService.logout();
-      router.push('/login');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
+    await authService.logout();
+    router.replace('/login');
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
+  // ------------------------------------------------------------------
+  // 6. UI HELPERS
+  // ------------------------------------------------------------------
+  const getStatusColor = (s: string) => {
+    switch (s) {
       case 'active': return 'bg-green-500 text-black';
       case 'completed': return 'bg-gray-500 text-white';
       case 'upcoming': return 'bg-blue-500 text-black';
       default: return 'bg-gray-500 text-white';
     }
   };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
+  const getPriorityColor = (p: string) => {
+    switch (p) {
       case 'high': return 'bg-red-600 text-white';
       case 'medium': return 'bg-yellow-500 text-black';
       case 'low': return 'bg-gray-600 text-white';
       default: return 'bg-gray-600 text-white';
     }
   };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
+  const getStatusIcon = (s: string) => {
+    switch (s) {
       case 'active': return <Target className="h-4 w-4" />;
       case 'completed': return <CheckCircle2 className="h-4 w-4" />;
       case 'upcoming': return <Clock className="h-4 w-4" />;
@@ -137,13 +172,15 @@ export default function MissionsPage() {
     }
   };
 
-  // Stats
   const activeCount = allMissions.filter(m => m.status === 'active').length;
   const upcomingCount = allMissions.filter(m => m.status === 'upcoming').length;
   const completedCount = allMissions.filter(m => m.status === 'completed').length;
   const highPriorityCount = allMissions.filter(m => m.priority === 'high').length;
 
-  if (loading) {
+  // ------------------------------------------------------------------
+  // 7. RENDER
+  // ------------------------------------------------------------------
+  if (checkingAuth || loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-green-400" />
@@ -236,7 +273,7 @@ export default function MissionsPage() {
 
         {/* Mission + Add Button */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left: Current Mission */}
+          {/* Current Mission */}
           <div>
             <h2 className="text-xl font-semibold text-green-400 mb-4">Current Mission</h2>
             {mission ? (
@@ -293,7 +330,7 @@ export default function MissionsPage() {
             )}
           </div>
 
-          {/* Right: Add Mission */}
+          {/* Add Mission */}
           <div className="flex items-center justify-center">
             <button
               onClick={() => setShowCreateModal(true)}
