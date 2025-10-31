@@ -39,7 +39,7 @@ app.use(express.urlencoded({ extended: true }));
 import noderoute from "./routes/noderoutes.js";
 
 
-app.use("/api", noderoute);
+app.use("/api", noderoute(io));
 
 
 

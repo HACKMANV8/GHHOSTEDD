@@ -1,19 +1,30 @@
 import express from "express";
-const router = express.Router();
+import { sendHeatmapData } from "../controllers/heatmapandloc.js";
+
+export default (io) => {
+    const router = express.Router();
+
+    //heatmap route
+    router.get("/heatmap", (req, res) => {
+        if (!io.heatmapInterval) {
+            io.heatmapInterval = setInterval(() => {
+                sendHeatmapData(io);
+            }, 90000);
+            console.log("📡 Heatmap broadcast started (every 2 seconds)");
+        }
+
+        res.status(200).json({ success: true, message: "Heatmap streaming started" });
+    });
 
 
-//reuquired files
 
-
-// Example POST route for loc
-router.post("/loc", (req, res) => {
-     res.status(200).json({ success: true, message: "Message sent via socket" });
-});
-router.get("/gaslevel", (req, res) => {
+    router.get("/gaslevel", (req, res) => {
         res.send("GAS LEVEL ROUTE WORKING FINE");
-});
-router.get("/heatmap", (req, res) => {
-        res.send("SMOKE LEVEL ROUTE WORKING FINE");
-});
+    });
 
-export default router;
+    router.get("/loc", (req, res) => {
+        res.status(200).json({ success: true, message: "Location received",loc:'12.908921, 77.566399'});
+    });
+
+    return router;
+};
