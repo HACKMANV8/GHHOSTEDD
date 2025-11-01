@@ -1,9 +1,10 @@
 ﻿"use client"
 
 import React, { useState, useEffect, useRef } from 'react'
-import Link from 'next/link'
-import { Target, LayoutDashboard, Cpu, Sun, Moon, Home, ChevronDown } from 'lucide-react'
+// import Link from 'next/link' // Keeping Next.js imports out to avoid build errors
+import { Target, LayoutDashboard, Cpu, Sun, Moon, ChevronDown, LogOut } from 'lucide-react'
 import { useTheme } from 'next-themes'
+import { authService } from '@/lib/api' // Using alias as seen in user's other files
 
 const nodes = [
   { id: 'node-a1', name: 'NODE-A1', status: 'OPERATIONAL' },
@@ -15,12 +16,14 @@ export default function Navbar() {
   const [greeting, setGreeting] = useState('')
   const [mounted, setMounted] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const [pathname, setPathname] = useState('') // State to hold current path
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const { theme, setTheme, resolvedTheme } = useTheme()
 
   useEffect(() => {
     setMounted(true)
+    setPathname(window.location.pathname) // Set pathname on mount
 
     // Greeting logic
     const hour = new Date().getHours()
@@ -39,12 +42,22 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const handleLogout = async () => {
+    await authService.logout();
+    window.location.href = '/login';
+  };
+
   const toggleTheme = () => {
     const current = resolvedTheme || theme
     setTheme(current === 'dark' ? 'light' : 'dark')
   }
 
+  // Active link classes
+  const nodeActive = pathname.startsWith('/node')
+  const adminActive = pathname === '/admin'
+
   if (!mounted) {
+    // Render a placeholder with the same height to prevent layout shift
     return <nav className="h-[69px]"></nav>
   }
 
@@ -60,7 +73,8 @@ export default function Navbar() {
         
         {/* === LEFT: Logo === */}
         <div className="flex-1">
-          <Link 
+          {/* Using <a> tag for simple navigation to avoid 'next/link' import issues */}
+          <a 
             href="/" 
             className="
               flex items-center gap-2 text-xl font-bold tracking-wide
@@ -70,24 +84,12 @@ export default function Navbar() {
           >
             <Target size={24} />
             Naakshatra
-          </Link>
+          </a>
         </div>
 
         {/* === CENTER: Nav Links === */}
         <div className="flex items-center gap-6">
           
-          <Link 
-            href="/" 
-            className="
-              flex items-center gap-1.5 font-medium
-              text-gray-400 hover:text-emerald-400
-              transition-colors duration-200
-            "
-          >
-            <Home size={18} />
-            Home
-          </Link>
-
           {/* === DROPDOWN MENU === */}
           <div className="relative" ref={dropdownRef}>
             <button 
@@ -95,7 +97,7 @@ export default function Navbar() {
               className={`
                 flex items-center gap-1.5 font-medium rounded-md px-2 py-1
                 transition-all duration-200
-                ${isDropdownOpen 
+                ${isDropdownOpen || nodeActive // Highlight if dropdown open or on node page
                   ? 'text-emerald-400 bg-gray-800/50' 
                   : 'text-gray-400 hover:text-emerald-400'
                 }
@@ -126,7 +128,7 @@ export default function Navbar() {
                 </div>
 
                 {/* Node Overview */}
-                <Link
+                <a
                   href="/node"
                   className="flex items-center justify-between px-4 py-3 text-sm text-gray-100 hover:bg-gray-800 transition-colors"
                   onClick={() => setIsDropdownOpen(false)}
@@ -135,11 +137,11 @@ export default function Navbar() {
                     <Cpu size={14} className="text-emerald-400" />
                     Node Overview
                   </span>
-                </Link>
+                </a>
 
                 {/* Node List */}
                 {nodes.map((node) => (
-                  <Link
+                  <a
                     key={node.id}
                     href={`/node/${node.id}`}
                     className="flex items-center justify-between px-4 py-3 text-sm text-gray-100 hover:bg-gray-800 transition-colors"
@@ -155,32 +157,35 @@ export default function Navbar() {
                     `}>
                       {node.status}
                     </span>
-                  </Link>
+                  </a>
                 ))}
               </div>
             )}
           </div>
 
-          <Link 
+          {/* Admin Link */}
+          <a 
             href="/admin" 
-            className="
+            className={`
               flex items-center gap-1.5 font-medium
-              text-gray-400 hover:text-emerald-400
               transition-colors duration-200
-            "
+              ${adminActive ? 'text-emerald-400' : 'text-gray-400 hover:text-emerald-400'}
+            `}
           >
             <LayoutDashboard size={18} />
             Admin
-          </Link>
+          </a>
         </div>
 
-        {/* === RIGHT: Greeting + Theme Toggle === */}
+        {/* === RIGHT: Greeting + Theme Toggle + Logout === */}
         <div className="flex-1 flex items-center justify-end gap-6">
           {greeting && (
             <span className="text-gray-400">
               {greeting}, Admin
             </span>
           )}
+          
+          {/* Theme Toggle */}
           <button 
             onClick={toggleTheme}
             className="
@@ -195,6 +200,19 @@ export default function Navbar() {
               <Moon size={20} />
             )}
           </button>
+
+          {/* Logout Button */}
+          <button
+            onClick={handleLogout}
+            className="
+              text-gray-400 hover:text-red-500
+              transition-colors duration-200
+            "
+            aria-label="Logout"
+          >
+            <LogOut size={20} />
+          </button>
+
         </div>
       </div>
     </nav>

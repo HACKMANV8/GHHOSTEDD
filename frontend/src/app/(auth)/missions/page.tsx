@@ -281,7 +281,7 @@ useEffect(() => {
                 className="bg-[#1a1a1a] border-gray-800 hover:border-green-400 transition-all cursor-pointer"
                 onClick={() => {
                   localStorage.setItem('currentMission', JSON.stringify(mission));
-                  router.push('/home');
+                  router.push('/admin');
                 }}
               >
                 <CardHeader>
