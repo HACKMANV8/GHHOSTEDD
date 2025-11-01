@@ -1,4 +1,3 @@
-// src/lib/api.ts
 import axios from 'axios';
 
 // ---------------------------------------------------------------
@@ -149,6 +148,13 @@ export const missionService = {
 
     const { data } = await axios.post<MissionBackend>(`${BASE_URL}/missions`, payload);
     return mapToFrontend(data);
+  },
+
+  // 💡 NEW: Function to delete a mission by ID
+  deleteMission: async (id: string) => {
+    // This sends a DELETE request to /api/missions/:id
+    await axios.delete(`${BASE_URL}/missions/${id}`);
+    // No data is returned, status 204 or 200 is expected for success
   },
 };
 
