@@ -14,12 +14,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Lock } from "lucide-react";
+import { Loader2, Lock, User } from "lucide-react";
 import Link from "next/link";
 
 export default function LoginForm() {
   const router = useRouter();
-  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [formData, setFormData] = useState({ username: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -29,18 +29,18 @@ export default function LoginForm() {
     setLoading(true);
 
     try {
-      const result = await authService.login(formData.email, formData.password);
+      // authService.login() saves token in localStorage + attaches to axios
+      await authService.login(formData.username, formData.password);
 
-      // Backend should set `auth_token` cookie automatically (withCredentials: true)
-      // If you want to store user info locally:
-      if (result.user) {
-        localStorage.setItem("user", JSON.stringify(result.user));
-      }
-
+      // Redirect to missions
       router.push("/missions");
-      router.refresh();
     } catch (err: any) {
-      setError(err.message || "Login failed. Please try again.");
+      // Show backend error message if available
+      const message =
+        err.response?.data?.message ||
+        err.message ||
+        "Invalid username or password";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -77,18 +77,22 @@ export default function LoginForm() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-300">
-                Email
+              <Label htmlFor="username" className="text-gray-300">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Username
+                </div>
               </Label>
               <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="soldier@unit.mil"
-                value={formData.email}
+                id="username"
+                name="username"
+                type="text"
+                placeholder="SGT.KHAN"
+                value={formData.username}
                 onChange={handleChange}
                 required
-                className="bg-[#0a0a0a] border-gray-700 text-white placeholder:text-gray-500 focus:border-green-400"
+                autoCapitalize="characters"
+                className="bg-[#0a0a0a] border-gray-700 text-white placeholder:text-gray-500 focus:border-green-400 uppercase font-mono tracking-wider"
               />
             </div>
 
