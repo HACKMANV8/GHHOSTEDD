@@ -18,9 +18,11 @@ import {
 } from "lucide-react";
 
 import EnvironmentalMap from '@/components/EnvironmentalMap';
+// 💡 NEW: Import the toast notification utility
+import toast from 'react-hot-toast';
 
 /* -------------------------------------------------------------------------- */
-/* DATA TYPES                                */
+/* DATA TYPES                                */
 /* -------------------------------------------------------------------------- */
 interface HeatmapPoint {
   lat: number;
@@ -32,8 +34,19 @@ interface LocationResponse {
   loc?: string; // "12.9716,77.5946"
 }
 
+// 💡 NEW: Define the types for the environment status and socket events
+type EnvStatus = "Safe" | "Caution" | "Danger" | "Unknown";
+
+interface EnvUpdate {
+  environment_status: EnvStatus;
+}
+
+interface SurvivalUpdate {
+  survival_time: number | null;
+}
+
 /* -------------------------------------------------------------------------- */
-/* COMPASS COMPONENT                             */
+/* COMPASS COMPONENT                             */
 /* -------------------------------------------------------------------------- */
 interface CompassProps {
   nodeLocation: [number, number];
@@ -124,14 +137,66 @@ function Compass({ nodeLocation, heatmapData }: CompassProps) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* MAIN PAGE                                 */
+/* MAIN PAGE                                 */
 /* -------------------------------------------------------------------------- */
 export default function NodePage() {
   const [heatmapData, setHeatmapData] = useState<HeatmapPoint[]>([]);
   const [gasLevel, setGasLevel] = useState<string>('');
   const [location, setLocation] = useState<[number, number]>([12.9716, 77.5946]);
   const [loading, setLoading] = useState(true);
+  
+  // 💡 NEW: State for environment status
+  const [envStatus, setEnvStatus] = useState<EnvStatus>("Unknown");
+  // 💡 NEW: State and constants for toast alert throttling
+  const [lastAlertTime, setLastAlertTime] = useState(0); 
+  const ALERT_COOLDOWN_MS = 10000; // 10 seconds cooldown for DANGER alerts
 
+  // 💡 NEW: Conditional class for borders
+  const borderClass = envStatus === "Danger" 
+    ? "border-red-500 ring-4 ring-red-500/50" // Danger: Red border and ring
+    : envStatus === "Caution"
+    ? "border-yellow-500" // Caution: Yellow border
+    : "border"; // Default border
+
+  // 💡 NEW: Function to display the DANGER evacuation alert
+  const triggerDangerAlert = (survivalTime: number | null) => {
+    const now = Date.now();
+    if (now - lastAlertTime < ALERT_COOLDOWN_MS) {
+      // Suppress alert if one was shown recently
+      return;
+    }
+
+    const survivalMsg = survivalTime !== null
+        ? `Estimated Time to Loss: ${survivalTime.toFixed(1)} minutes.`
+        : 'Survival time is critical and unknown.';
+
+    toast.custom((t) => (
+      <div
+        className={`bg-red-900 border-4 border-red-500 text-white p-4 rounded-lg shadow-2xl flex items-center gap-4 transition-all duration-300 ${
+          t.visible ? 'animate-enter' : 'animate-leave'
+        }`}
+        style={{ animationDuration: '300ms' }} // Assuming you have Tailwind/CSS keyframes for animate-enter/leave
+      >
+        <AlertTriangle className="h-6 w-6 flex-shrink-0 text-red-400" />
+        <div>
+          <p className="font-bold text-lg">DANGER! IMMEDIATE EVACUATION REQUIRED</p>
+          <p className="text-sm">{survivalMsg}</p>
+        </div>
+        <button 
+          onClick={() => toast.dismiss(t.id)} 
+          className="ml-4 text-red-300 hover:text-white font-bold"
+        >
+          DISMISS
+        </button>
+      </div>
+    ), { 
+      duration: 6000, // Toast lasts for 6 seconds
+      position: 'top-center'
+    });
+
+    setLastAlertTime(now);
+  };
+  
   useEffect(() => {
     const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN || 'http://localhost:4000';
     const socket: Socket = io(API_ORIGIN, { withCredentials: true });
@@ -169,12 +234,25 @@ export default function NodePage() {
       }
     });
 
+    // 💡 NEW: Socket listener for environment status
+    socket.on('env_update', (data: EnvUpdate) => {
+        setEnvStatus(data.environment_status);
+    });
+
+    // 💡 NEW: Socket listener for survival prediction (triggers alert)
+    socket.on('survival_update', (data: SurvivalUpdate) => {
+      // Only show the alert if the status is currently Danger
+      if (envStatus === "Danger") {
+        triggerDangerAlert(data.survival_time);
+      }
+    });
+
     initializeData();
 
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [envStatus]); // Dependency on envStatus is important for the `survival_update` logic
 
   if (loading) {
     return (
@@ -195,6 +273,7 @@ export default function NodePage() {
         {/* CHANGED: Now uses your theme variable */}
         <h1 className="text-3xl font-bold text-accent-green">Node</h1>
         {/* CHANGED: Now uses your theme variable */}
+        {/* 💡 NOTE: You might want to color the badge based on envStatus too */}
         <Badge variant="outline" className="text-accent-green border-accent-green">
           NODE_ALPHA-01
         </Badge>
@@ -204,8 +283,8 @@ export default function NodePage() {
 
         {/* COLUMN 1 */}
         <div className="flex flex-col gap-6">
-          {/* CORRECT: These classes match your theme file */}
-          <Card className="bg-card text-card-foreground border">
+          {/* 💡 Applied conditional border: Command & Comms */}
+          <Card className={`bg-card text-card-foreground ${borderClass}`}>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-accent-green">
                 <Terminal className="h-5 w-5" /> Command & Comms
@@ -222,8 +301,8 @@ export default function NodePage() {
             </CardContent>
           </Card>
 
-          {/* CORRECT: These classes match your theme file */}
-          <Card className="bg-card text-card-foreground border">
+          {/* 💡 Applied conditional border: Unit Roster */}
+          <Card className={`bg-card text-card-foreground ${borderClass}`}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-accent-green">
                 <Users className="h-5 w-5" /> Unit Roster
@@ -243,8 +322,8 @@ export default function NodePage() {
             </CardContent>
           </Card>
 
-          {/* CORRECT: These classes match your theme file */}
-          <Card className="bg-card text-card-foreground border flex-1">
+          {/* 💡 Applied conditional border: Recent Alerts */}
+          <Card className={`bg-card text-card-foreground ${borderClass} flex-1`}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-accent-green">
                 <AlertTriangle className="h-5 w-5" /> Recent Alerts
@@ -271,8 +350,8 @@ export default function NodePage() {
 
         {/* COLUMN 2 */}
         <div className="flex flex-col gap-6 lg:col-span-2">
-          {/* CORRECT: These classes match your theme file */}
-          <Card className="bg-card text-card-foreground border lg:h-96 flex flex-col">
+          {/* 💡 Applied conditional border: Environmental Trend (Map) */}
+          <Card className={`bg-card text-card-foreground ${borderClass} lg:h-96 flex flex-col`}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-accent-green">
                 <BarChart3 className="h-5 w-5" /> Environmental Trend
@@ -284,8 +363,8 @@ export default function NodePage() {
           </Card>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* CORRECT: These classes match your theme file */}
-            <Card className="bg-card text-card-foreground border">
+            {/* 💡 Applied conditional border: Primary Visualizer */}
+            <Card className={`bg-card text-card-foreground ${borderClass}`}>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-accent-green">
                   <MapPin className="h-5 w-5" /> Primary Visualizer
@@ -301,8 +380,8 @@ export default function NodePage() {
               </CardContent>
             </Card>
 
-            {/* CORRECT: These classes match your theme file */}
-            <Card className="bg-card text-card-foreground border">
+            {/* 💡 Applied conditional border: Biometric Feed (Soldier) */}
+            <Card className={`bg-card text-card-foreground ${borderClass}`}>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-accent-green">
                   <HeartPulse className="h-5 w-5" /> Biometric Feed (Soldier)
@@ -318,8 +397,8 @@ export default function NodePage() {
 
         {/* COLUMN 3 */}
         <div className="flex flex-col gap-6">
-          {/* CORRECT: These classes match your theme file */}
-          <Card className="bg-card text-card-foreground border">
+          {/* 💡 Applied conditional border: System Health */}
+          <Card className={`bg-card text-card-foreground ${borderClass}`}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-accent-green">
                 <Server className="h-5 w-5" /> System Health
@@ -339,8 +418,8 @@ export default function NodePage() {
             </CardContent>
           </Card>
 
-          {/* CORRECT: These classes match your theme file */}
-          <Card className="bg-card text-card-foreground border">
+          {/* 💡 Applied conditional border: Compass */}
+          <Card className={`bg-card text-card-foreground ${borderClass}`}>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-accent-green">
                 <CompassIcon className="h-5 w-5" /> Compass

@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+// import { useRouter } from 'next/navigation'; // Removed useRouter dependency
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -23,8 +23,10 @@ import {
   Shield,
   LogOut,
   Plus,
+  X, // Added X icon
 } from "lucide-react";
-import { authService, missionService, setAuthToken } from '@/lib/api';
+// Corrected import path and removed unnecessary Next.js imports
+import { authService, missionService, setAuthToken } from '../../../lib/api'; // Increased path depth for (auth) group
 
 interface Mission {
   id: string;
@@ -38,99 +40,108 @@ interface Mission {
   estimatedDuration: string;
 }
 
+const emptyForm = {
+  title: '',
+  description: '',
+  status: 'upcoming' as const,
+  priority: 'medium' as const,
+  location: '',
+  assignedTeam: '',
+  startDate: '',
+  estimatedDuration: '',
+};
+
 export default function MissionsPage() {
-  const router = useRouter();
+  // const router = useRouter(); // Removed hook call
 
   // ------------------------------------------------------------------
-  // 1. AUTH GUARD – redirect if token missing/expired
+  // 1. AUTH GUARD
   // ------------------------------------------------------------------
   const [checkingAuth, setCheckingAuth] = useState(true);
 
-useEffect(() => {
-  const token = localStorage.getItem('authToken');
-  console.log('Token from localStorage:', token); // Debug
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      window.location.href = '/login'; // Replaced router.replace
+      return;
+    }
+    setCheckingAuth(false);
+  }, []); // router dependency removed
 
-  if (!token) {
-    router.replace('/login');
-    return;
-  }
-
-  // Token exists → allow missions to load
-  setCheckingAuth(false);
-}, [router]);
   // ------------------------------------------------------------------
   // 2. MISSIONS STATE
   // ------------------------------------------------------------------
-  const [mission, setMission] = useState<Mission | null>(null);
   const [allMissions, setAllMissions] = useState<Mission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [modalError, setModalError] = useState(''); // Separate error for modal
+  const [pageError, setPageError] = useState(''); // Error for page-level issues
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
-
-  const [form, setForm] = useState({
-    title: '',
-    description: '',
-    status: 'upcoming' as const,
-    priority: 'medium' as const,
-    location: '',
-    assignedTeam: '',
-    startDate: '',
-    estimatedDuration: '',
-  });
+  const [form, setForm] = useState(emptyForm);
 
   // ------------------------------------------------------------------
-  // 3. FETCH MISSIONS (only after auth)
+  // 3. FETCH MISSIONS
   // ------------------------------------------------------------------
   useEffect(() => {
-  if (checkingAuth) {
-    console.log('Still checking auth...');
-    return;
-  }
+    if (checkingAuth) return;
 
-  console.log('Fetching missions...');
+    const fetchMissions = async () => {
+      try {
+        const data = await missionService.getMyMissions();
+        setAllMissions(data || []);
+      } catch (err: any) {
+        console.error('Mission fetch error:', err);
+        setPageError(err.response?.data?.message || 'Failed to load missions');
+        if (err.response?.status === 401) {
+          localStorage.removeItem('authToken');
+          setAuthToken(null);
+          window.location.href = '/login'; // Replaced router.replace
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
 
- const fetchMissions = async () => {
-  try {
-    const data = await missionService.getMyMissions();
-    console.log('Raw missions data:', data); // Debug
-    setAllMissions(data || []);
-    setMission(data[0] || null);
-  } catch (err: any) {
-    console.error('Mission fetch error:', err);
-    setError(err.response?.data?.message || 'Failed to load missions');
-    if (err.response?.status === 401) {
-      localStorage.removeItem('authToken');
-      setAuthToken(null);
-      router.replace('/login');
+    fetchMissions();
+  }, [checkingAuth]); // router dependency removed
+
+  // ------------------------------------------------------------------
+  // 4. MODAL & FORM LOGIC
+  // ------------------------------------------------------------------
+
+  // Effect to listen for Escape key
+  useEffect(() => {
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeModal();
+      }
+    };
+    if (showCreateModal) {
+      window.addEventListener('keydown', handleEsc);
     }
-  } finally {
-    setLoading(false);
-  }
-};
+    return () => {
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, [showCreateModal]);
 
-  fetchMissions();
-}, [checkingAuth, router]);
+  const closeModal = () => {
+    setShowCreateModal(false);
+    setForm(emptyForm);
+    setModalError('');
+  };
 
-  // ------------------------------------------------------------------
-  // 4. CREATE MISSION
-  // ------------------------------------------------------------------
   const handleCreateMission = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
-    setError('');
+    setModalError('');
 
     try {
       const newMission = await missionService.createMission(form);
       setAllMissions(prev => [newMission, ...prev]);
-      setMission(newMission);
-      setShowCreateModal(false);
-      setForm({
-        title: '', description: '', status: 'upcoming', priority: 'medium',
-        location: '', assignedTeam: '', startDate: '', estimatedDuration: '',
-      });
+      closeModal(); // Use the close modal function
     } catch (err: any) {
-      setError(err.message || 'Failed to create mission');
+      // Set error inside the modal, keep it open
+      setModalError(err.message || 'Failed to create mission');
     } finally {
       setCreating(false);
     }
@@ -141,7 +152,7 @@ useEffect(() => {
   // ------------------------------------------------------------------
   const handleLogout = async () => {
     await authService.logout();
-    router.replace('/login');
+    window.location.href = '/login'; // Replaced router.replace
   };
 
   // ------------------------------------------------------------------
@@ -214,9 +225,9 @@ useEffect(() => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {error && (
+        {pageError && (
           <Alert variant="destructive" className="mb-6 bg-red-900/20 border-red-900 text-red-400">
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{pageError}</AlertDescription>
           </Alert>
         )}
 
@@ -233,7 +244,7 @@ useEffect(() => {
               </div>
             </CardContent>
           </Card>
-
+          {/* ... other stats cards ... */}
           <Card className="bg-[#1a1a1a] border-gray-800">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -245,7 +256,6 @@ useEffect(() => {
               </div>
             </CardContent>
           </Card>
-
           <Card className="bg-[#1a1a1a] border-gray-800">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -257,7 +267,6 @@ useEffect(() => {
               </div>
             </CardContent>
           </Card>
-
           <Card className="bg-[#1a1a1a] border-gray-800">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -271,92 +280,110 @@ useEffect(() => {
           </Card>
         </div>
 
-        {/* Mission + Add Button */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Current Mission */}
-          <div>
-            <h2 className="text-xl font-semibold text-green-400 mb-4">Current Mission</h2>
-            {mission ? (
+        {/* --- MODIFIED SECTION: Mission List --- */}
+        
+        {/* Header for list and add button */}
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-semibold text-green-400">Available Missions</h2>
+          <Button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+          >
+            <Plus className="h-5 w-5" />
+            Add Mission
+          </Button>
+        </div>
+
+        {/* Mission Grid */}
+        {allMissions.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {allMissions.map((mission) => (
               <Card 
-                className="bg-[#1a1a1a] border-gray-800 hover:border-green-400 transition-all cursor-pointer"
+                key={mission.id}
+                className="bg-[#1a1a1a] border-gray-800 hover:border-green-400 transition-all cursor-pointer flex flex-col"
                 onClick={() => {
                   localStorage.setItem('currentMission', JSON.stringify(mission));
-                  router.push('/admin');
+                  window.location.href = '/admin'; // Replaced router.push
                 }}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between mb-2">
-                    <Badge className={getStatusColor(mission.status)}>
-                      <span className="flex items-center gap-1">
-                        {getStatusIcon(mission.status)}
-                        {mission.status.toUpperCase()}
-                      </span>
-                    </Badge>
-                    <Badge className={getPriorityColor(mission.priority)}>
-                      {mission.priority.toUpperCase()}
-                    </Badge>
+                    {/* Mission Badge and Priority */}
+                    <div className="flex items-center gap-2">
+                        <Badge className={getStatusColor(mission.status)}>
+                            <span className="flex items-center gap-1">
+                                {getStatusIcon(mission.status)}
+                                {mission.status.toUpperCase()}
+                            </span>
+                        </Badge>
+                        <Badge className={getPriorityColor(mission.priority)}>
+                            {mission.priority.toUpperCase()}
+                        </Badge>
+                    </div>
                   </div>
                   <CardTitle className="text-green-400 text-lg">{mission.title}</CardTitle>
-                  <CardDescription className="text-gray-400 text-sm">
-                    Mission ID: {mission.id}
+                  <CardDescription className="text-gray-400 text-sm break-words">
+                    {/* FIX: Use break-words to ensure long strings wrap */}
+                    Mission ID: <span className="break-all font-mono">{mission.id}</span>
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-gray-300 text-sm mb-4">{mission.description}</p>
-                  <div className="space-y-2 text-sm">
+                <CardContent className="flex-1 flex flex-col justify-between">
+                  <p className="text-gray-300 text-sm mb-4 line-clamp-2">{mission.description || "No description."}</p>
+                  <div className="space-y-2 text-sm mt-auto">
                     <div className="flex items-center gap-2 text-gray-400">
                       <MapPin className="h-4 w-4" />
-                      <span>{mission.location}</span>
+                      <span>{mission.location || "N/A"}</span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-400">
                       <Users className="h-4 w-4" />
-                      <span>{mission.assignedTeam}</span>
+                      <span>{mission.assignedTeam || "N/A"}</span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-400">
                       <Calendar className="h-4 w-4" />
-                      <span>{mission.startDate}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-400">
-                      <Clock className="h-4 w-4" />
-                      <span>{mission.estimatedDuration}</span>
+                      <span>{mission.startDate || "N/A"}</span>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            ) : (
-              <div className="text-center py-12 text-gray-500 bg-[#1a1a1a] rounded-lg border border-dashed border-gray-700">
-                No active mission. Create one to begin.
-              </div>
-            )}
+            ))}
           </div>
+        ) : (
+          <div className="text-center py-12 text-gray-500 bg-[#1a1a1a] rounded-lg border border-dashed border-gray-700">
+            No missions found. Create one to begin.
+          </div>
+        )}
+        {/* --- END MODIFIED SECTION --- */}
 
-          {/* Add Mission */}
-          <div className="flex items-center justify-center">
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="group flex flex-col items-center justify-center w-48 h-48 bg-[#1a1a1a] border-2 border-dashed border-gray-600 rounded-xl hover:border-green-400 hover:bg-[#0f1a0f] transition-all"
-            >
-              <Plus className="h-16 w-16 text-gray-500 group-hover:text-green-400 transition-colors" />
-              <span className="mt-3 text-lg font-semibold text-gray-400 group-hover:text-green-400">
-                Add Mission
-              </span>
-            </button>
-          </div>
-        </div>
       </main>
 
       {/* Create Mission Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-2xl bg-[#1a1a1a] border-gray-800">
+          <Card className="w-full max-w-2xl bg-[#1a1a1a] border-gray-800 relative">
             <CardHeader>
-              <CardTitle className="text-green-400 flex items-center gap-2">
-                <Target className="h-6 w-6" />
-                Create New Mission
-              </CardTitle>
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-green-400 flex items-center gap-2">
+                  <Target className="h-6 w-6" />
+                  Create New Mission
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={closeModal}
+                  className="text-gray-400 hover:text-white absolute top-4 right-4"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleCreateMission} className="space-y-4">
+                {modalError && (
+                  <Alert variant="destructive" className="bg-red-900/20 border-red-900 text-red-400">
+                    <AlertDescription>{modalError}</AlertDescription>
+                  </Alert>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="title">Title</Label>
@@ -447,7 +474,7 @@ useEffect(() => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setShowCreateModal(false)}
+                    onClick={closeModal}
                     className="flex-1"
                   >
                     Cancel

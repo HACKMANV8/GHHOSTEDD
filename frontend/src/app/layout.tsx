@@ -1,10 +1,13 @@
-﻿// src/app/layout.tsx  <-- This is your ORIGINAL file, now cleaned up
+﻿// src/app/layout.tsx 
 
 import './globals.css'
 import 'leaflet/dist/leaflet.css'
 import React from 'react'
+
 // 1. DO NOT import Navbar here anymore
 import { AppThemeProvider } from './theme-provider'
+// 💡 NEW: Import the Toaster component from your UI directory
+import { Toaster } from '@/components/ui/toaster' 
 
 export const metadata = {
   title: 'Naakshatra',
@@ -23,6 +26,9 @@ export default function RootLayout({
         <AppThemeProvider>
           {children}
         </AppThemeProvider>
+        
+        {/* 🚀 ADDED: The Toaster component is placed here to display alerts */}
+        <Toaster /> 
       </body>
     </html>
   )
